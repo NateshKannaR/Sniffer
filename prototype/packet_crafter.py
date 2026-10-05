@@ -35,12 +35,20 @@ class PacketCrafter:
         # Handle Presets
         if preset == "xmas":
             flags = ["FIN", "PSH", "URG"]
+            if src_ip == "10.138.114.94":
+                src_ip = "198.51.100.42"
         elif preset == "null":
             flags = []
+            if src_ip == "10.138.114.94":
+                src_ip = "198.51.100.42"
         elif preset == "syn":
             flags = ["SYN"]
+            if src_ip == "10.138.114.94":
+                src_ip = "198.51.100.42"
         elif preset == "rst":
             flags = ["RST"]
+            if src_ip == "10.138.114.94":
+                src_ip = "198.51.100.42"
 
         flag_hex = 0
         for f in flags:

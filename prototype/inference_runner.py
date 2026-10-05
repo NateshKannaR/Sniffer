@@ -29,6 +29,13 @@ class InferenceRunner:
         self.device = device
         self.blocked_ips: Dict[str, Dict[str, Any]] = {}
         self.ips_events: List[Dict[str, Any]] = []
+        self.protected_whitelist = {
+            "10.138.114.94",  # Local Host Machine (wlo1)
+            "10.138.114.67",  # Local Gateway Router
+            "127.0.0.1",
+            "::1",
+            "localhost",
+        }
 
         if HAS_TORCH:
             # Instantiate PyTorch GraphIDS model
@@ -119,13 +126,25 @@ class InferenceRunner:
             results.append(res)
 
             # Trigger Active Linux IPS if anomaly detected
-            if is_anomaly and flow.src_ip not in self.blocked_ips:
-                self._trigger_ips_mitigation(flow.src_ip, actual_mse, flow.attack_type or "Graph_Anomaly")
+            if is_anomaly:
+                target_to_block = flow.src_ip
+                if target_to_block in self.protected_whitelist:
+                    # If source is local machine, only block if destination is external malicious host
+                    if flow.dst_ip not in self.protected_whitelist:
+                        target_to_block = flow.dst_ip
+                    else:
+                        target_to_block = None
+
+                if target_to_block and target_to_block not in self.blocked_ips:
+                    self._trigger_ips_mitigation(target_to_block, actual_mse, flow.attack_type or "Graph_Anomaly")
 
         mean_mse = float(sum(r["mse"] for r in results) / max(1, len(results)))
         return results, mean_mse
 
     def _trigger_ips_mitigation(self, attacker_ip: str, mse: float, reason: str):
+        if not attacker_ip or attacker_ip in self.protected_whitelist:
+            return
+
         now = time.time()
         nft_rule = f"nft add element inet filter blocklist {{ {attacker_ip} timeout 10m }}"
         iptables_rule = f"iptables -I INPUT -s {attacker_ip} -j DROP"

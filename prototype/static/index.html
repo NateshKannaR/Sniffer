@@ -157,17 +157,17 @@
           <input type="text" id="packet-filter" oninput="applyPacketFilter()" placeholder="Filter IP, port, proto..." class="px-2.5 py-1 text-xs rounded bg-slate-800 border border-slate-700 text-slate-200 focus:outline-none focus:border-blue-500">
         </div>
 
-        <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
-          <table class="w-full text-left text-xs font-mono">
-            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400">
+        <div class="overflow-y-auto max-h-[460px] overflow-x-hidden">
+          <table class="w-full text-left text-[11px] font-mono table-fixed">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400 z-10">
               <tr>
-                <th class="py-2 px-2">#</th>
-                <th class="py-2 px-2">Process (PID)</th>
-                <th class="py-2 px-2">Source IP</th>
-                <th class="py-2 px-2">Dest IP</th>
-                <th class="py-2 px-2">Proto</th>
-                <th class="py-2 px-2">Len</th>
-                <th class="py-2 px-2">Flags / Summary</th>
+                <th class="py-2 px-1.5 w-10">#</th>
+                <th class="py-2 px-1.5 w-24">Process</th>
+                <th class="py-2 px-1.5 w-32">Source IP</th>
+                <th class="py-2 px-1.5 w-36">Dest IP</th>
+                <th class="py-2 px-1.5 w-16">Proto</th>
+                <th class="py-2 px-1.5 w-10">Len</th>
+                <th class="py-2 px-1.5">Flags / Info</th>
               </tr>
             </thead>
             <tbody id="packet-table-body" class="divide-y divide-slate-800/80">
@@ -181,7 +181,10 @@
       <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col space-y-3 shadow-sm">
         <div class="flex items-center justify-between pb-2 border-b border-slate-800">
           <h2 class="font-bold text-sm text-white">OSI Layer & Hex Inspector</h2>
-          <span id="inspect-pkt-badge" class="text-xs font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Select a packet</span>
+          <div class="flex items-center gap-1.5">
+            <span id="inspect-pkt-badge" class="text-xs font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Streaming Live</span>
+            <button onclick="unpinPacket()" id="unpin-btn" class="hidden text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors">▶ Auto-Follow Live</button>
+          </div>
         </div>
 
         <div class="space-y-3 text-xs overflow-y-auto max-h-[440px] pr-1 font-mono">
@@ -878,6 +881,11 @@
 
     // Data Source Switching (Simulated vs Live Interface)
     function setSource(sourceKey) {
+      state.packets = [];
+      state.selectedPacket = null;
+      state.isUserPinned = false;
+      const badge = document.getElementById('inspect-pkt-badge');
+      if (badge) badge.textContent = "Buffering packets...";
       fetch('/api/source', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -950,7 +958,7 @@
           state.packets.unshift(data.packet);
           if (state.packets.length > 80) state.packets.pop();
           state.totalPackets++;
-          if (!state.selectedPacket) {
+          if (!state.selectedPacket || !state.isUserPinned) {
             inspectPacket(data.packet);
           }
         }
@@ -1023,7 +1031,12 @@
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800/60 cursor-pointer transition-colors " + 
           (state.selectedPacket && state.selectedPacket.id === p.id ? "bg-slate-800/80" : "");
-        tr.onclick = () => inspectPacket(p);
+        tr.onclick = () => {
+          state.isUserPinned = true;
+          const unpinBtn = document.getElementById('unpin-btn');
+          if (unpinBtn) unpinBtn.classList.remove('hidden');
+          inspectPacket(p);
+        };
 
         let protoBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">${p.protocol_name}</span>`;
         if (p.protocol_name === 'HTTP') protoBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">HTTP</span>`;
@@ -1049,13 +1062,13 @@
         }).join(" ");
 
         tr.innerHTML = `
-          <td class="py-1.5 px-2 text-slate-500">${p.id}</td>
-          <td class="py-1.5 px-2">${procBadge}</td>
-          <td class="py-1.5 px-2 text-emerald-400">${p.src_ip}:${p.src_port}</td>
-          <td class="py-1.5 px-2 text-indigo-400">${p.dst_ip}:${p.dst_port} ${geoBadge}</td>
-          <td class="py-1.5 px-2">${protoBadge}</td>
-          <td class="py-1.5 px-2">${p.length}</td>
-          <td class="py-1.5 px-2 text-slate-300">${flagPills} <span class="text-slate-400 text-[10px] ml-1">${p.info}</span></td>
+          <td class="py-1 px-1.5 text-slate-500 font-mono truncate">${p.id}</td>
+          <td class="py-1 px-1.5 truncate" title="${p.process ? p.process.name + ' [' + p.process.pid + ']' : '-'}">${procBadge}</td>
+          <td class="py-1 px-1.5 text-emerald-400 font-mono truncate" title="${p.src_ip}:${p.src_port}">${p.src_ip}:${p.src_port}</td>
+          <td class="py-1 px-1.5 text-indigo-400 font-mono truncate" title="${p.dst_ip}:${p.dst_port}">${p.dst_ip}:${p.dst_port} ${geoBadge}</td>
+          <td class="py-1 px-1.5 truncate">${protoBadge}</td>
+          <td class="py-1 px-1.5 text-slate-400 font-mono truncate">${p.length}</td>
+          <td class="py-1 px-1.5 text-slate-300 truncate font-mono" title="${p.info}">${flagPills} <span class="text-slate-400 text-[10px] ml-1">${p.info}</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1116,6 +1129,15 @@
 
       document.getElementById('insp-hex').textContent = p.payload_hex || "(No payload data)";
       document.getElementById('insp-ascii').textContent = p.payload_ascii || "-";
+    }
+
+    function unpinPacket() {
+      state.isUserPinned = false;
+      const unpinBtn = document.getElementById('unpin-btn');
+      if (unpinBtn) unpinBtn.classList.add('hidden');
+      if (state.packets.length > 0) {
+        inspectPacket(state.packets[0]);
+      }
     }
 
     function renderFlowTable() {
@@ -1437,23 +1459,33 @@
       });
 
       if (preset === 'normal') {
+        document.getElementById('craft-src-ip').value = "10.138.114.94";
+        document.getElementById('craft-dst-ip').value = "10.0.0.1";
         document.getElementById('flag-syn').checked = true;
         document.getElementById('craft-payload').value = "GET /index.html HTTP/1.1";
         document.getElementById('craft-dst-port').value = 80;
       } else if (preset === 'xmas') {
+        document.getElementById('craft-src-ip').value = "198.51.100.42";
+        document.getElementById('craft-dst-ip').value = "10.138.114.94";
         document.getElementById('flag-fin').checked = true;
         document.getElementById('flag-psh').checked = true;
         document.getElementById('flag-urg').checked = true;
         document.getElementById('craft-payload').value = "XMAS_TREE_PROBE_SCAN";
         document.getElementById('craft-dst-port').value = 445;
       } else if (preset === 'null') {
+        document.getElementById('craft-src-ip').value = "198.51.100.42";
+        document.getElementById('craft-dst-ip').value = "10.138.114.94";
         document.getElementById('craft-payload').value = "NULL_SCAN_EVASION_TEST";
         document.getElementById('craft-dst-port').value = 22;
       } else if (preset === 'syn') {
+        document.getElementById('craft-src-ip').value = "198.51.100.42";
+        document.getElementById('craft-dst-ip').value = "10.138.114.94";
         document.getElementById('flag-syn').checked = true;
         document.getElementById('craft-payload').value = "SYN_STEALTH_PROBE";
         document.getElementById('craft-dst-port').value = 3389;
       } else if (preset === 'rst') {
+        document.getElementById('craft-src-ip').value = "198.51.100.42";
+        document.getElementById('craft-dst-ip').value = "10.138.114.94";
         document.getElementById('flag-rst').checked = true;
         document.getElementById('craft-payload').value = "RESET_CONNECTION_TERMINATION";
         document.getElementById('craft-dst-port').value = 80;
