@@ -31,6 +31,11 @@ class PacketData:
     payload_ascii: str = ""
     is_attack: bool = False
     attack_type: str | None = None
+    domain: str | None = None
+    http_method: str | None = None
+    http_uri: str | None = None
+    dns_query: str | None = None
+    sni: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -229,8 +234,47 @@ class TrafficGenerator:
 
         else:
             # Normal Benign Traffic
-            traffic_type = random.choice(["http", "dns", "api", "db"])
-            if traffic_type == "http":
+            traffic_type = random.choice(["https", "http", "dns", "db"])
+            if traffic_type == "https":
+                domain, ip_dst = random.choice([
+                    ("github.com", "140.82.121.4"),
+                    ("www.google.com", "142.250.190.46"),
+                    ("api.cloudflare.com", "104.16.132.229"),
+                    ("en.wikipedia.org", "198.35.26.96"),
+                    ("cdn.discordapp.com", "162.159.130.233"),
+                ])
+                payload = f"Client Hello TLS 1.3 (SNI: {domain})"
+                hex_dump, ascii_dump = self._format_payload(payload)
+                return PacketData(
+                    id=self.packet_counter,
+                    timestamp=now,
+                    src_mac="08:00:27:12:34:56",
+                    dst_mac="52:54:00:12:34:56",
+                    eth_type="0x0800",
+                    src_ip=self.client_ip,
+                    dst_ip=ip_dst,
+                    ip_version=4,
+                    ttl=64,
+                    protocol_num=6,
+                    protocol_name="TLS/HTTPS",
+                    ip_len=len(payload) + 40,
+                    src_port=random.randint(45000, 60000),
+                    dst_port=443,
+                    tcp_seq=self.seq_num,
+                    tcp_ack=self.seq_num + 50,
+                    tcp_flags=["PSH", "ACK"],
+                    tcp_flags_hex=0x18,
+                    length=len(payload) + 40,
+                    info=f"TLS Client Hello (SNI: {domain})",
+                    payload_hex=hex_dump,
+                    payload_ascii=ascii_dump,
+                    is_attack=False,
+                    domain=domain,
+                    sni=domain,
+                    http_method="TLS 1.3",
+                    http_uri=f"https://{domain}/",
+                )
+            elif traffic_type == "http":
                 is_req = random.random() > 0.5
                 src_ip = self.client_ip if is_req else self.web_server_ip
                 dst_ip = self.web_server_ip if is_req else self.client_ip
@@ -238,14 +282,14 @@ class TrafficGenerator:
                 dst_p = 80 if is_req else 51234
                 flags = ["PSH", "ACK"]
                 info = (
-                    "GET /index.html HTTP/1.1"
+                    "GET /api/v1/status HTTP/1.1"
                     if is_req
-                    else "HTTP/1.1 200 OK (text/html)"
+                    else "HTTP/1.1 200 OK (application/json)"
                 )
                 payload = (
-                    "Host: internal-portal\r\nUser-Agent: Mozilla/5.0"
+                    "Host: portal.internal\r\nUser-Agent: Mozilla/5.0"
                     if is_req
-                    else "<!DOCTYPE html><html><body>Welcome</body></html>"
+                    else '{"status":"healthy","uptime":3600}'
                 )
                 hex_dump, ascii_dump = self._format_payload(payload)
                 return PacketData(
@@ -259,7 +303,7 @@ class TrafficGenerator:
                     ip_version=4,
                     ttl=64,
                     protocol_num=6,
-                    protocol_name="TCP",
+                    protocol_name="HTTP",
                     ip_len=len(payload) + 40,
                     src_port=src_p,
                     dst_port=dst_p,
@@ -272,9 +316,15 @@ class TrafficGenerator:
                     payload_hex=hex_dump,
                     payload_ascii=ascii_dump,
                     is_attack=False,
+                    domain="portal.internal",
+                    http_method="GET",
+                    http_uri="/api/v1/status",
                 )
             elif traffic_type == "dns":
-                hex_dump, ascii_dump = self._format_payload("gateway.internal\x00")
+                lookup_domain = random.choice([
+                    "github.com", "google.com", "cloudflare.com", "wikipedia.org"
+                ])
+                hex_dump, ascii_dump = self._format_payload(f"{lookup_domain}\x00")
                 return PacketData(
                     id=self.packet_counter,
                     timestamp=now,
@@ -286,7 +336,7 @@ class TrafficGenerator:
                     ip_version=4,
                     ttl=64,
                     protocol_num=17,
-                    protocol_name="UDP",
+                    protocol_name="DNS",
                     ip_len=68,
                     src_port=53211,
                     dst_port=53,
@@ -295,10 +345,12 @@ class TrafficGenerator:
                     tcp_flags=[],
                     tcp_flags_hex=0,
                     length=68,
-                    info="Standard query A web.internal",
+                    info=f"Standard query A {lookup_domain}",
                     payload_hex=hex_dump,
                     payload_ascii=ascii_dump,
                     is_attack=False,
+                    domain=lookup_domain,
+                    dns_query=lookup_domain,
                 )
             else:
                 # Internal database traffic
@@ -417,6 +469,11 @@ class LivePacketSniffer:
             "-e", "udp.dstport",
             "-e", "_ws.col.Info",
             "-e", "data.data",
+            "-e", "tls.handshake.extensions_server_name",
+            "-e", "http.host",
+            "-e", "http.request.method",
+            "-e", "http.request.uri",
+            "-e", "dns.qry.name",
         ]
 
         try:
@@ -515,6 +572,29 @@ class LivePacketSniffer:
                     hex_formatted = "00 00 00 00 00 00 00 00"
                     ascii_chars = "........"
 
+                sni = parts[20].strip() if len(parts) > 20 else ""
+                http_host = parts[21].strip() if len(parts) > 21 else ""
+                http_method = parts[22].strip() if len(parts) > 22 else ""
+                http_uri = parts[23].strip() if len(parts) > 23 else ""
+                dns_query = parts[24].strip() if len(parts) > 24 else ""
+
+                domain = sni or http_host or (dns_query.rstrip(".") if dns_query else None)
+                if not domain and "SNI: " in info:
+                    domain = info.split("SNI: ")[-1].split(")")[0].strip()
+                if not domain and "query " in info and " A " in info:
+                    domain = info.split(" A ")[-1].strip()
+
+                if sni:
+                    proto_name = "TLS/HTTPS"
+                    if "Application Data" not in info:
+                        info = f"TLS Client Hello (SNI: {sni})"
+                elif http_host:
+                    proto_name = "HTTP"
+                    info = f"{http_method or 'GET'} {http_host}{http_uri or '/'}"
+                elif dns_query:
+                    proto_name = "DNS"
+                    info = f"DNS Query: {dns_query}"
+
                 pkt = PacketData(
                     id=self.packet_counter,
                     timestamp=ts,
@@ -539,6 +619,11 @@ class LivePacketSniffer:
                     payload_hex=hex_formatted,
                     payload_ascii=ascii_chars,
                     is_attack=False,
+                    domain=domain if domain else None,
+                    http_method=http_method if http_method else None,
+                    http_uri=http_uri if http_uri else None,
+                    dns_query=dns_query if dns_query else None,
+                    sni=sni if sni else None,
                 )
 
                 if not self.packet_queue.full():

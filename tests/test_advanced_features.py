@@ -110,3 +110,53 @@ def test_packet_crafter():
     assert pkt_custom.protocol_name == "UDP"
     assert pkt_custom.ttl == 128
     assert "CUSTOM_DNS_QUERY" in pkt_custom.payload_ascii
+
+
+def test_web_dpi_and_requests():
+    from prototype.packet_engine import PacketData, TrafficGenerator
+    from prototype.server import PrototypeState
+
+    # 1. Verify PacketData DPI fields
+    pkt = PacketData(
+        id=1,
+        timestamp=1000.0,
+        src_mac="00:11:22:33:44:55",
+        dst_mac="66:77:88:99:aa:bb",
+        eth_type="0x0800",
+        src_ip="10.138.114.94",
+        dst_ip="140.82.121.4",
+        ip_version=4,
+        ttl=64,
+        protocol_num=6,
+        protocol_name="TLS/HTTPS",
+        ip_len=512,
+        src_port=54321,
+        dst_port=443,
+        domain="github.com",
+        sni="github.com",
+        http_method="TLS 1.3",
+        http_uri="https://github.com/NateshKannaR/Sniffer",
+    )
+    d = pkt.to_dict()
+    assert d["domain"] == "github.com"
+    assert d["sni"] == "github.com"
+    assert d["http_method"] == "TLS 1.3"
+
+    # 2. Verify TrafficGenerator produces web domains
+    gen = TrafficGenerator()
+    found_domain = False
+    for _ in range(20):
+        p = gen.generate_packet("normal")
+        if p.domain:
+            found_domain = True
+            break
+    assert found_domain, "TrafficGenerator should generate web traffic with domains"
+
+    # 3. Verify PrototypeState captures web requests in buffer
+    state = PrototypeState()
+    state._enrich_packet(pkt)
+    assert len(state.web_requests) > 0
+    latest = state.web_requests[0]
+    assert latest["domain"] == "github.com"
+    assert latest["method"] == "TLS 1.3"
+    assert latest["dst_ip"] == "140.82.121.4"

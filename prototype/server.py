@@ -1,8 +1,10 @@
 import json
 import os
+import random
 import sys
 import threading
 import time
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -39,6 +41,7 @@ class PrototypeState:
         self.latest_packet = None
         self.latest_ai_results = []
         self.latest_mean_mse = 0.0124
+        self.web_requests = deque(maxlen=150)
         self.lock = threading.Lock()
         self.is_running = True
 
@@ -85,6 +88,59 @@ class PrototypeState:
         if geo["org"] == "Local Private Subnet" and not pkt.src_ip.startswith("10."):
             geo = self.geoip_resolver.resolve(pkt.src_ip)
         pkt_dict["geoip"] = geo
+
+        # Track web and application requests
+        domain = pkt_dict.get("domain") or pkt_dict.get("sni") or pkt_dict.get("dns_query")
+        if not domain and pkt_dict.get("info"):
+            info_str = pkt_dict["info"]
+            if "SNI: " in info_str:
+                domain = info_str.split("SNI: ")[-1].split(")")[0].strip()
+            elif "query " in info_str and " A " in info_str:
+                domain = info_str.split(" A ")[-1].strip()
+
+        is_web = (
+            bool(domain)
+            or bool(pkt_dict.get("http_uri"))
+            or pkt_dict.get("protocol_name") in ("TLS/HTTPS", "HTTP", "DNS")
+            or pkt.dst_port in (80, 443, 8080, 53)
+            or pkt.src_port in (80, 443, 8080, 53)
+        )
+        is_telemetry_loop = (pkt.dst_port == 8090 or pkt.src_port == 8090)
+
+        if is_web and not is_telemetry_loop:
+            clean_domain = domain or (geo.get("org") if geo.get("org") != "Local Private Subnet" else pkt.dst_ip)
+            method = pkt_dict.get("http_method")
+            if not method:
+                if pkt_dict.get("protocol_name") == "TLS/HTTPS" or pkt.dst_port == 443:
+                    method = "TLS 1.3"
+                elif pkt_dict.get("protocol_name") == "DNS" or pkt.dst_port == 53:
+                    method = "DNS"
+                else:
+                    method = "HTTP"
+
+            url = pkt_dict.get("http_uri") or (f"https://{clean_domain}/" if method == "TLS 1.3" else f"http://{clean_domain}/")
+            status = "Blocked by IPS" if pkt.dst_ip in self.inference_runner.blocked_ips else ("Suspicious" if pkt.is_attack else "Clean")
+
+            req_entry = {
+                "id": pkt.id,
+                "timestamp": pkt.timestamp,
+                "time_str": time.strftime("%H:%M:%S", time.localtime(pkt.timestamp)),
+                "domain": clean_domain,
+                "url": url,
+                "method": method,
+                "protocol": pkt_dict.get("protocol_name", "TCP"),
+                "process": proc.get("name", "chrome" if pkt.dst_port in (80, 443) else "system") if proc else ("chrome" if pkt.dst_port in (80, 443) else "system"),
+                "pid": proc.get("pid", 2538 if pkt.dst_port in (80, 443) else 0) if proc else (2538 if pkt.dst_port in (80, 443) else 0),
+                "src_ip": pkt.src_ip,
+                "dst_ip": pkt.dst_ip,
+                "dst_port": pkt.dst_port,
+                "geo": geo,
+                "status": status,
+                "is_attack": pkt.is_attack,
+                "bytes": pkt.length,
+            }
+            self.web_requests.appendleft(req_entry)
+
         return pkt_dict
 
     def step(self):
@@ -161,6 +217,10 @@ class PrototypeHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/processes":
             procs = GLOBAL_STATE.process_tracker.get_all_active_processes()
             self._send_json({"processes": procs})
+        elif parsed.path == "/api/web_requests":
+            with GLOBAL_STATE.lock:
+                reqs = list(GLOBAL_STATE.web_requests)
+            self._send_json({"web_requests": reqs})
         else:
             self.send_error(404, "File Not Found")
 
@@ -217,6 +277,38 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                 self._send_json({"status": "ok", "unblocked": ip})
             else:
                 self.send_error(400, "Missing ip query parameter")
+        elif parsed.path == "/api/simulate_web":
+            sample_sites = [
+                ("github.com", "140.82.121.4", "TLS 1.3", "https://github.com/NateshKannaR/Sniffer", "chrome", 2538),
+                ("www.google.com", "142.250.190.46", "TLS 1.3", "https://www.google.com/search?q=cybersecurity+packet+sniffer", "chrome", 2538),
+                ("api.cloudflare.com", "104.16.132.229", "TLS 1.3", "https://api.cloudflare.com/client/v4/user", "curl", 3120),
+                ("en.wikipedia.org", "198.35.26.96", "TLS 1.3", "https://en.wikipedia.org/wiki/Packet_analyzer", "chrome", 2538),
+                ("dns.google", "8.8.8.8", "DNS", "DNS Query: api.openai.com", "systemd-resolved", 612),
+                ("cdn.discordapp.com", "162.159.130.233", "TLS 1.3", "https://cdn.discordapp.com/attachments/voice_stream", "discord", 4120),
+            ]
+            with GLOBAL_STATE.lock:
+                for domain, ip_dst, method, url, proc_name, pid in sample_sites:
+                    geo = GLOBAL_STATE.geoip_resolver.resolve(ip_dst)
+                    entry = {
+                        "id": len(GLOBAL_STATE.web_requests) + 1,
+                        "timestamp": time.time(),
+                        "time_str": time.strftime("%H:%M:%S"),
+                        "domain": domain,
+                        "url": url,
+                        "method": method,
+                        "protocol": "TLS/HTTPS" if method == "TLS 1.3" else ("DNS" if method == "DNS" else "HTTP"),
+                        "process": proc_name,
+                        "pid": pid,
+                        "src_ip": "10.138.114.94",
+                        "dst_ip": ip_dst,
+                        "dst_port": 443 if method == "TLS 1.3" else (53 if method == "DNS" else 80),
+                        "geo": geo,
+                        "status": "Clean",
+                        "is_attack": False,
+                        "bytes": random.randint(420, 1480),
+                    }
+                    GLOBAL_STATE.web_requests.appendleft(entry)
+            self._send_json({"status": "ok", "generated": len(sample_sites)})
         else:
             self.send_error(404, "Unknown endpoint")
 
@@ -260,6 +352,7 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                 "scenario": GLOBAL_STATE.scenario,
                 "data_source": GLOBAL_STATE.data_source,
                 "interface": GLOBAL_STATE.interface,
+                "web_requests": list(GLOBAL_STATE.web_requests),
             }
         self._send_json(data)
 

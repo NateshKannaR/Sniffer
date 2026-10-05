@@ -111,33 +111,37 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
       1. Network & Process Tab
     </button>
+    <button onclick="switchTab('web-tab')" id="nav-web-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+      2. 🌐 Web & App Requests (DPI)
+    </button>
     <button onclick="switchTab('flow-tab')" id="nav-flow-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-      2. NetFlow Aggregator
+      3. NetFlow Aggregator
     </button>
     <button onclick="switchTab('graph-tab')" id="nav-graph-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-      3. Topology & GeoIP
+      4. Topology & GeoIP
     </button>
     <button onclick="switchTab('graphids-tab')" id="nav-graphids-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-      4. GraphIDS AI Engine
+      5. GraphIDS AI Engine
     </button>
     <button onclick="switchTab('ips-tab')" id="nav-ips-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-      5. Linux Defense (IPS)
+      6. Linux Defense (IPS)
     </button>
     <button onclick="switchTab('lan-tab')" id="nav-lan-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
-      6. LAN & ARP Scanner
+      7. LAN & ARP Scanner
     </button>
     <button onclick="switchTab('crafter-tab')" id="nav-crafter-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-      7. Packet Crafter Lab
+      8. Packet Crafter Lab
     </button>
     <button onclick="switchTab('tcp-tab')" id="nav-tcp-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-      8. TCP Handshake Visualizer
+      9. TCP Handshake Visualizer
     </button>
   </nav>
 
@@ -280,7 +284,69 @@
       </div>
     </div>
 
-    <!-- TAB 2: NETFLOW AGGREGATOR -->
+    <!-- TAB 2: WEB & APP REQUESTS (DPI INSPECTOR) -->
+    <div id="view-web-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h2 class="font-bold text-base text-white">Full-System Web & Application Request Stream (DPI)</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Captures every HTTP request, TLS SNI domain handshake, and DNS lookup across all browser tabs and Linux desktop apps.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btn-sim-web" onclick="triggerSimulateWeb()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+              ⚡ Simulate Web Browsing
+            </button>
+            <span class="text-xs px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono">
+              Captured: <span id="web-total-count" class="font-bold text-white">0</span> requests (<span id="web-domain-count" class="font-bold text-white">0</span> domains)
+            </span>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
+          <div class="flex items-center gap-2 flex-1 min-w-[260px]">
+            <span class="text-slate-400 text-xs">🔍</span>
+            <input id="web-search-input" oninput="renderWebRequests()" type="text" placeholder="Filter by domain, URL, or process (e.g. google, chrome, github)..." class="bg-slate-900 border border-slate-700/80 rounded px-2.5 py-1 text-xs text-white placeholder-slate-500 w-full focus:outline-none focus:border-blue-500 font-mono">
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-web-all" onclick="setWebTypeFilter('all')" class="px-2.5 py-1 rounded bg-blue-600 text-white font-medium text-xs shadow-sm">All</button>
+            <button id="btn-web-https" onclick="setWebTypeFilter('https')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-xs">HTTPS (TLS)</button>
+            <button id="btn-web-http" onclick="setWebTypeFilter('http')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-xs">HTTP (Plain)</button>
+            <button id="btn-web-dns" onclick="setWebTypeFilter('dns')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-xs">DNS Queries</button>
+            <button id="btn-web-threats" onclick="setWebTypeFilter('threats')" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-xs">Threats / Blocked</button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto rounded-lg border border-slate-800/80">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">Time</th>
+                <th class="py-2.5 px-3">Process / App</th>
+                <th class="py-2.5 px-3">Protocol / Method</th>
+                <th class="py-2.5 px-3">Target Website / Domain</th>
+                <th class="py-2.5 px-3">Path / Resource</th>
+                <th class="py-2.5 px-3">Destination IP & ASN</th>
+                <th class="py-2.5 px-3 text-right">AI / IPS Status</th>
+              </tr>
+            </thead>
+            <tbody id="web-table-body" class="divide-y divide-slate-800/80">
+              <tr>
+                <td colspan="7" class="py-8 text-center text-slate-500 font-mono text-xs">
+                  Streaming live web requests... (or click "Simulate Web Browsing" to test)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: NETFLOW AGGREGATOR -->
     <div id="view-flow-tab" class="hidden space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
@@ -828,13 +894,14 @@
       selectedPacket: null,
       totalPackets: 0,
       totalFlows: 0,
-      meanMse: 0.0124
+      meanMse: 0.0124,
+      webRequests: []
     };
 
     // Tab Navigation
     function switchTab(tabId) {
       currentTab = tabId;
-      ['network-tab', 'flow-tab', 'graph-tab', 'graphids-tab', 'ips-tab', 'lan-tab', 'crafter-tab', 'tcp-tab'].forEach(t => {
+      ['network-tab', 'web-tab', 'flow-tab', 'graph-tab', 'graphids-tab', 'ips-tab', 'lan-tab', 'crafter-tab', 'tcp-tab'].forEach(t => {
         const view = document.getElementById(`view-${t}`);
         const nav = document.getElementById(`nav-${t}`);
         if (!view || !nav) return;
@@ -848,6 +915,9 @@
           nav.classList.add('border-transparent', 'text-slate-400');
         }
       });
+      if (tabId === 'web-tab') {
+        renderWebRequests();
+      }
       if (tabId === 'graph-tab') {
         drawTopology();
       }
@@ -982,6 +1052,10 @@
           state.ipsStatus = data.ips_status;
         }
 
+        if (data.web_requests) {
+          state.webRequests = data.web_requests;
+        }
+
         renderAll();
       } catch (err) {
         console.error("Telemetry fetch error:", err);
@@ -1015,6 +1089,9 @@
 
       // 6. IPS Defense Tab
       renderIpsTab();
+
+      // 7. Web Requests Tab
+      renderWebRequests();
     }
 
     function renderPacketTable() {
@@ -1257,6 +1334,127 @@
 
     function unblockIp(ip) {
       fetch(`/api/unblock?ip=${encodeURIComponent(ip)}`, { method: 'POST' });
+    }
+
+    // Web & App Requests Inspector (DPI)
+    let webTypeFilter = 'all';
+
+    function setWebTypeFilter(type) {
+      webTypeFilter = type;
+      ['all', 'https', 'http', 'dns', 'threats'].forEach(t => {
+        const btn = document.getElementById(`btn-web-${t}`);
+        if (!btn) return;
+        if (t === type) {
+          btn.className = 'px-2.5 py-1 rounded bg-blue-600 text-white font-medium text-xs shadow-sm cursor-pointer';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-medium text-xs cursor-pointer';
+        }
+      });
+      renderWebRequests();
+    }
+
+    function renderWebRequests() {
+      const tbody = document.getElementById('web-table-body');
+      if (!tbody) return;
+      const search = (document.getElementById('web-search-input')?.value || '').toLowerCase().trim();
+
+      const reqs = state.webRequests || [];
+      const totalCountEl = document.getElementById('web-total-count');
+      const domainCountEl = document.getElementById('web-domain-count');
+      if (totalCountEl) totalCountEl.textContent = reqs.length;
+
+      // Calculate unique domains
+      const domains = new Set(reqs.map(r => r.domain).filter(Boolean));
+      if (domainCountEl) domainCountEl.textContent = domains.size;
+
+      // Filter requests
+      const filtered = reqs.filter(r => {
+        if (webTypeFilter === 'https' && r.protocol !== 'TLS/HTTPS' && r.method !== 'TLS 1.3') return false;
+        if (webTypeFilter === 'http' && r.protocol !== 'HTTP' && !r.method.startsWith('HTTP')) return false;
+        if (webTypeFilter === 'dns' && r.protocol !== 'DNS' && !r.method.includes('DNS')) return false;
+        if (webTypeFilter === 'threats' && r.status === 'Clean') return false;
+
+        if (search) {
+          const matchDomain = (r.domain || '').toLowerCase().includes(search);
+          const matchUrl = (r.url || '').toLowerCase().includes(search);
+          const matchProc = (r.process || '').toLowerCase().includes(search);
+          const matchIp = (r.dst_ip || '').toLowerCase().includes(search);
+          if (!matchDomain && !matchUrl && !matchProc && !matchIp) return false;
+        }
+        return true;
+      });
+
+      tbody.innerHTML = '';
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-mono text-xs">No web requests matching current filter. Browse web pages or click "Simulate Web Browsing".</td></tr>`;
+        return;
+      }
+
+      filtered.slice(0, 80).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/60 transition-colors border-b border-slate-800/50';
+
+        const flag = r.geo && r.geo.flag ? r.geo.flag : '🌐';
+        const org = r.geo && r.geo.org ? r.geo.org : (r.geo && r.geo.country ? r.geo.country : 'Internet Gateway');
+
+        let methodBadge = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+        if (r.method === 'TLS 1.3' || r.protocol === 'TLS/HTTPS') {
+          methodBadge = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        } else if (r.protocol === 'DNS' || r.method.includes('DNS')) {
+          methodBadge = 'bg-purple-500/20 text-purple-300 border border-purple-500/30';
+        } else if (r.method === 'POST') {
+          methodBadge = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        }
+
+        let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">Clean</span>';
+        if (r.status === 'Blocked by IPS') {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/40 font-bold animate-pulse">Blocked (IPS)</span>';
+        } else if (r.is_attack || r.status === 'Suspicious') {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold">Suspicious</span>';
+        }
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-slate-400 text-xs whitespace-nowrap">${r.time_str || '--:--:--'}</td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 font-mono text-[11px] border border-slate-700/60 inline-flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full ${r.process === 'chrome' ? 'bg-amber-400' : 'bg-cyan-400'}"></span>
+              ${r.process} <span class="text-slate-500">[${r.pid}]</span>
+            </span>
+          </td>
+          <td class="py-2.5 px-3 whitespace-nowrap">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${methodBadge}">${r.method || r.protocol}</span>
+          </td>
+          <td class="py-2.5 px-3 font-medium text-white text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base">${flag}</span>
+              <span class="text-sky-300 font-semibold tracking-wide">${r.domain}</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-3 text-slate-300 text-xs font-mono truncate max-w-xs" title="${r.url}">
+            ${r.url}
+          </td>
+          <td class="py-2.5 px-3 text-slate-400 text-xs whitespace-nowrap">
+            <span class="text-slate-300 font-mono">${r.dst_ip}:${r.dst_port}</span>
+            <span class="text-slate-500 text-[10px] block truncate max-w-[140px]">${org}</span>
+          </td>
+          <td class="py-2.5 px-3 text-right whitespace-nowrap">
+            ${statusBadge}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function triggerSimulateWeb() {
+      try {
+        const btn = document.getElementById('btn-sim-web');
+        if (btn) btn.innerHTML = '⚡ Generating...';
+        await fetch('/api/simulate_web', { method: 'POST' });
+        if (btn) btn.innerHTML = '⚡ Simulate Web Browsing';
+        pollData();
+      } catch (e) {
+        console.error("Simulation error", e);
+      }
     }
 
     // Force Topology Canvas Drawing
