@@ -1,14 +1,14 @@
 import socket
-from typing import Any, Dict
+from typing import Any
 
 
 class GeoIpResolver:
     """Resolves IP addresses to Organization, ASN, Country, and Hostname."""
 
     def __init__(self):
-        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.cache: dict[str, dict[str, Any]] = {}
 
-    def resolve(self, ip: str) -> Dict[str, Any]:
+    def resolve(self, ip: str) -> dict[str, Any]:
         if not ip or ip == "0.0.0.0":
             return {"org": "Unknown", "asn": "-", "country": "Unknown", "flag": "🌐", "hostname": "-"}
 
@@ -19,7 +19,7 @@ class GeoIpResolver:
         self.cache[ip] = info
         return info
 
-    def _lookup_intelligence(self, ip: str) -> Dict[str, Any]:
+    def _lookup_intelligence(self, ip: str) -> dict[str, Any]:
         # 1. Private / Local LAN
         if (
             ip.startswith("10.")

@@ -1,8 +1,7 @@
-import pytest
-from prototype.process_tracker import ProcessTracker
 from prototype.geoip_resolver import GeoIpResolver
 from prototype.lan_scanner import LanScanner
 from prototype.packet_crafter import PacketCrafter
+from prototype.process_tracker import ProcessTracker
 
 
 def test_process_tracker():
@@ -21,7 +20,7 @@ def test_process_tracker():
 
 def test_geoip_resolver():
     resolver = GeoIpResolver()
-    
+
     # Test Google IP
     google_res = resolver.resolve("8.8.8.8")
     assert google_res["org"] == "Google LLC"
@@ -45,7 +44,7 @@ def test_geoip_resolver():
 
 def test_lan_scanner():
     scanner = LanScanner(interface="wlo1")
-    
+
     # OUI vendor resolution
     vendor_intel = scanner.get_oui_vendor("50:2f:9b:12:34:56")
     assert "Intel" in vendor_intel

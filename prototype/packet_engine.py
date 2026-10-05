@@ -2,7 +2,7 @@ import random
 import struct
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -21,18 +21,18 @@ class PacketData:
     ip_len: int
     src_port: int
     dst_port: int
-    tcp_seq: Optional[int] = None
-    tcp_ack: Optional[int] = None
-    tcp_flags: List[str] = field(default_factory=list)
+    tcp_seq: int | None = None
+    tcp_ack: int | None = None
+    tcp_flags: list[str] = field(default_factory=list)
     tcp_flags_hex: int = 0
     length: int = 0
     info: str = ""
     payload_hex: str = ""
     payload_ascii: str = ""
     is_attack: bool = False
-    attack_type: Optional[str] = None
+    attack_type: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -343,8 +343,8 @@ class LivePacketSniffer:
         self.interface = interface
         self.packet_queue: queue.Queue = queue.Queue(maxsize=1000)
         self.running = False
-        self.thread: Optional[threading.Thread] = None
-        self.process: Optional[subprocess.Popen] = None
+        self.thread: threading.Thread | None = None
+        self.process: subprocess.Popen | None = None
         self.packet_counter = 0
 
     def start(self):
@@ -364,13 +364,13 @@ class LivePacketSniffer:
                 pass
             self.process = None
 
-    def get_packet(self, timeout: float = 0.1) -> Optional[PacketData]:
+    def get_packet(self, timeout: float = 0.1) -> PacketData | None:
         try:
             return self.packet_queue.get(timeout=timeout)
         except queue.Empty:
             return None
 
-    def _parse_flags(self, flags_raw: str) -> tuple[List[str], int]:
+    def _parse_flags(self, flags_raw: str) -> tuple[list[str], int]:
         try:
             if flags_raw.startswith("0x"):
                 val = int(flags_raw, 16)

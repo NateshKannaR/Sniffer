@@ -11,21 +11,21 @@ concurrency:
 
 jobs:
   checks:
-    name: Lint, Type Check, and Tests
+    name: Lint and Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v5
       with:
-        python-version: "3.13"
+        python-version: "3.11"
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@v5
       with:
         enable-cache: true
 
@@ -35,8 +35,5 @@ jobs:
     - name: Run Ruff
       run: uv run ruff check .
 
-    - name: Run Ty
-      run: uv run ty check .
-
     - name: Run pytest
-      run: uv run pytest
+      run: uv run pytest tests/

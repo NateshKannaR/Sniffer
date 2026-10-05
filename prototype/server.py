@@ -284,10 +284,10 @@ def run_server(port: int = 8090):
         httpd = ThreadingHTTPServer(server_address, PrototypeHandler)
         actual_port = httpd.server_address[1]
 
-    print(f"================================================================")
-    print(f"  GraphIDS Linux ML Network Platform is Live!")
+    print("================================================================")
+    print("  GraphIDS Linux ML Network Platform is Live!")
     print(f"  Access Dashboard: http://localhost:{actual_port}")
-    print(f"================================================================")
+    print("================================================================")
     sys.stdout.flush()
 
     # Start background ingestion & AI worker thread

@@ -1,6 +1,6 @@
 import random
 import time
-from typing import Any, Dict, List
+
 from prototype.packet_engine import PacketData
 
 
@@ -24,7 +24,7 @@ class PacketCrafter:
         src_ip: str = "10.138.114.94",
         src_port: int = 0,
         protocol: str = "TCP",
-        flags: List[str] = None,
+        flags: list[str] = None,
         ttl: int = 64,
         preset: str = None,
         payload_text: str = "PROTOTYPE_CUSTOM_TEST_PACKET",

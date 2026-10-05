@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from prototype.flow_aggregator import FlowRecord
 
 try:
@@ -17,9 +18,9 @@ class GraphEngine:
     def __init__(self, window_size: int = 64, num_edge_features: int = 43):
         self.window_size = window_size
         self.num_edge_features = num_edge_features
-        self.flow_history: List[FlowRecord] = []
-        self.node_to_idx: Dict[str, int] = {}
-        self.idx_to_node: Dict[int, str] = {}
+        self.flow_history: list[FlowRecord] = []
+        self.node_to_idx: dict[str, int] = {}
+        self.idx_to_node: dict[int, str] = {}
 
     def add_flow(self, flow: FlowRecord):
         self.flow_history.append(flow)
@@ -33,7 +34,7 @@ class GraphEngine:
                 self.node_to_idx[ip] = new_idx
                 self.idx_to_node[new_idx] = ip
 
-    def to_pyg_data(self) -> Optional[Any]:
+    def to_pyg_data(self) -> Any | None:
         """Converts the current sliding window into a PyTorch Geometric Data object."""
         if not self.flow_history:
             return None
@@ -76,7 +77,7 @@ class GraphEngine:
 
             return MockData(src_indices, dst_indices, features, num_nodes)
 
-    def get_topology_json(self) -> Dict[str, Any]:
+    def get_topology_json(self) -> dict[str, Any]:
         """Returns node and edge structures for frontend interactive rendering."""
         window_ips = set()
         for f in self.flow_history:

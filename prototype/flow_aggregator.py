@@ -1,6 +1,8 @@
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
+
 from prototype.packet_engine import PacketData
 
 
@@ -22,17 +24,17 @@ class FlowRecord:
     tcp_flags: int
     tcp_flags_str: str
     is_attack: bool = False
-    attack_type: Optional[str] = None
+    attack_type: str | None = None
     status: str = "ACTIVE"  # "ACTIVE", "COMPLETED"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @property
     def key(self) -> tuple:
         return (self.src_ip, self.dst_ip, self.src_port, self.dst_port, self.protocol)
 
-    def to_feature_vector(self, num_features: int = 43) -> List[float]:
+    def to_feature_vector(self, num_features: int = 43) -> list[float]:
         """Encodes NetFlow statistics into a standardized numeric feature vector."""
         vec = [0.0] * num_features
         # Primary standard features matching NetFlow v3
@@ -73,10 +75,10 @@ class FlowAggregator:
 
     def __init__(self, flow_timeout_sec: float = 3.0):
         self.flow_timeout_sec = flow_timeout_sec
-        self.active_flows: Dict[tuple, FlowRecord] = {}
-        self.completed_flows: List[FlowRecord] = []
+        self.active_flows: dict[tuple, FlowRecord] = {}
+        self.completed_flows: list[FlowRecord] = []
         self.flow_counter = 0
-        self.listeners: List[Callable[[FlowRecord], None]] = []
+        self.listeners: list[Callable[[FlowRecord], None]] = []
 
     def register_listener(self, callback: Callable[[FlowRecord], None]):
         self.listeners.append(callback)
@@ -136,7 +138,7 @@ class FlowAggregator:
 
         return flow
 
-    def cleanup_expired(self, current_time: Optional[float] = None) -> List[FlowRecord]:
+    def cleanup_expired(self, current_time: float | None = None) -> list[FlowRecord]:
         now = current_time or time.time()
         expired_keys = []
         for key, flow in self.active_flows.items():
@@ -160,6 +162,6 @@ class FlowAggregator:
             return flow
         raise KeyError("Flow key not found")
 
-    def get_recent_flows(self, limit: int = 50) -> List[FlowRecord]:
+    def get_recent_flows(self, limit: int = 50) -> list[FlowRecord]:
         all_flows = list(self.active_flows.values()) + list(reversed(self.completed_flows))
         return all_flows[:limit]

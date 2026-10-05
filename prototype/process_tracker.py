@@ -1,7 +1,7 @@
 import glob
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ProcessTracker:
@@ -10,9 +10,9 @@ class ProcessTracker:
     def __init__(self, cache_ttl_sec: float = 2.0):
         self.cache_ttl = cache_ttl_sec
         self.last_refresh = 0.0
-        self.port_to_process: Dict[int, Dict[str, Any]] = {}
+        self.port_to_process: dict[int, dict[str, Any]] = {}
 
-    def get_process_for_port(self, port: int) -> Optional[Dict[str, Any]]:
+    def get_process_for_port(self, port: int) -> dict[str, Any] | None:
         """Returns process information associated with a local port number."""
         now = time.time()
         if now - self.last_refresh > self.cache_ttl:
@@ -20,7 +20,7 @@ class ProcessTracker:
 
         return self.port_to_process.get(port)
 
-    def refresh(self) -> Dict[int, Dict[str, Any]]:
+    def refresh(self) -> dict[int, dict[str, Any]]:
         """Force cache refresh and return port to process dictionary."""
         self._refresh_cache()
         return self.port_to_process
@@ -40,7 +40,7 @@ class ProcessTracker:
             if not os.path.exists(fpath):
                 continue
             try:
-                with open(fpath, "r") as f:
+                with open(fpath) as f:
                     for line in f.readlines()[1:]:
                         parts = line.strip().split()
                         if len(parts) >= 10:
@@ -77,14 +77,14 @@ class ProcessTracker:
                                 comm_file = os.path.join(pid_dir, "comm")
                                 comm = pid
                                 if os.path.exists(comm_file):
-                                    with open(comm_file, "r") as cf:
+                                    with open(comm_file) as cf:
                                         comm = cf.read().strip()
 
                                 # Get command line
                                 cmd_file = os.path.join(pid_dir, "cmdline")
                                 cmdline = comm
                                 if os.path.exists(cmd_file):
-                                    with open(cmd_file, "r", errors="ignore") as cmdf:
+                                    with open(cmd_file, errors="ignore") as cmdf:
                                         raw_cmd = cmdf.read().replace("\x00", " ").strip()
                                         if raw_cmd:
                                             cmdline = raw_cmd[:120]
@@ -101,7 +101,7 @@ class ProcessTracker:
 
         self.port_to_process = updated_map
 
-    def get_all_active_processes(self) -> Dict[int, Dict[str, Any]]:
+    def get_all_active_processes(self) -> dict[int, dict[str, Any]]:
         if time.time() - self.last_refresh > self.cache_ttl:
             self._refresh_cache()
         return self.port_to_process

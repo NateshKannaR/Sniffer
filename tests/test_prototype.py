@@ -1,6 +1,5 @@
 import struct
-import pytest
-import torch
+
 from prototype.flow_aggregator import FlowAggregator
 from prototype.graph_engine import GraphEngine
 from prototype.inference_runner import InferenceRunner

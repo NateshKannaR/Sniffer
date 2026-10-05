@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 
 class LanScanner:
@@ -28,7 +28,7 @@ class LanScanner:
     def __init__(self, interface: str = "wlo1"):
         self.interface = interface
         self.last_scan_time = 0.0
-        self.cached_devices: List[Dict[str, Any]] = []
+        self.cached_devices: list[dict[str, Any]] = []
 
     def get_oui_vendor(self, mac: str) -> str:
         if not mac:
@@ -37,13 +37,13 @@ class LanScanner:
         prefix = clean_mac[:8]
         if prefix in self.OUI_VENDORS:
             return self.OUI_VENDORS[prefix]
-        
+
         # Check standard prefixes
         if clean_mac.startswith("00:00:00") or clean_mac == "ff:ff:ff:ff:ff:ff":
             return "Broadcast / Multicast"
         return "Generic Network Device"
 
-    def scan_lan(self) -> List[Dict[str, Any]]:
+    def scan_lan(self) -> list[dict[str, Any]]:
         """Parses Linux kernel ARP table and inspects local neighborhood."""
         devices = []
         mac_seen = {}
@@ -53,7 +53,7 @@ class LanScanner:
             return []
 
         try:
-            with open(arp_path, "r") as f:
+            with open(arp_path) as f:
                 lines = f.readlines()[1:]  # Skip header
 
             for line in lines:

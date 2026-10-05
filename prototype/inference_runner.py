@@ -1,11 +1,12 @@
 import time
-from typing import Any, Dict, List, Optional
-from prototype.flow_aggregator import FlowRecord
+from typing import Any
+
 from prototype.graph_engine import GraphEngine
 
 try:
     import torch
     import torch.nn as nn
+
     from models.graphids import GraphIDS
     HAS_TORCH = True
 except ImportError:
@@ -27,8 +28,8 @@ class InferenceRunner:
         self.num_features = num_features
         self.threshold = threshold
         self.device = device
-        self.blocked_ips: Dict[str, Dict[str, Any]] = {}
-        self.ips_events: List[Dict[str, Any]] = []
+        self.blocked_ips: dict[str, dict[str, Any]] = {}
+        self.ips_events: list[dict[str, Any]] = []
         self.protected_whitelist = {
             "10.138.114.94",  # Local Host Machine (wlo1)
             "10.138.114.67",  # Local Gateway Router
@@ -69,7 +70,7 @@ class InferenceRunner:
 
     def evaluate_graph(
         self, graph_engine: GraphEngine
-    ) -> tuple[List[Dict[str, Any]], float]:
+    ) -> tuple[list[dict[str, Any]], float]:
         """Evaluates current graph window, returns per-flow scores and mean MSE."""
         pyg_data = graph_engine.to_pyg_data()
         if pyg_data is None:
@@ -168,7 +169,7 @@ class InferenceRunner:
         if ip in self.blocked_ips:
             del self.blocked_ips[ip]
 
-    def get_ips_status(self) -> Dict[str, Any]:
+    def get_ips_status(self) -> dict[str, Any]:
         return {
             "blocked_count": len(self.blocked_ips),
             "blocked_ips": list(self.blocked_ips.keys()),
