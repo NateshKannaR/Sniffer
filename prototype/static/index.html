@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GraphIDS: Linux ML Network Intrusion Detection & Prevention</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .animate-pulse-slow { animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP NAV BAR -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
+        G
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base tracking-tight text-white">GraphIDS Live</h1>
+          <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Linux IPS Active</span>
+          <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">E-GraphSAGE + Transformer</span>
+        </div>
+        <p class="text-xs text-slate-400">Real-Time Packet Ingestion, NetFlow Graphing, and Self-Supervised AI Intrusion Detection</p>
+      </div>
+    </div>
+
+    <!-- Live Controls & Scenario Deck -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Traffic Source Mode Selector -->
+      <div class="flex items-center bg-slate-800/90 p-1 rounded-lg border border-slate-700">
+        <span class="text-[11px] font-semibold uppercase text-slate-400 px-2">Data Source:</span>
+        <button onclick="setSource('simulated')" id="btn-src-sim" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-blue-600 text-white shadow-sm flex items-center gap-1">
+          ⚡ Lab Attacks
+        </button>
+        <button onclick="setSource('live')" id="btn-src-live" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          🌐 Real Wi-Fi (wlo1)
+        </button>
+      </div>
+
+      <!-- Scenario Selector -->
+      <div id="scenario-box" class="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700/80 transition-opacity">
+        <span class="text-[11px] font-semibold uppercase text-slate-400 px-2">Attack:</span>
+        <button onclick="setScenario('normal')" id="btn-normal" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all bg-emerald-600 text-white shadow-sm">
+          Normal
+        </button>
+        <button onclick="setScenario('syn_scan')" id="btn-syn_scan" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700">
+          SYN Scan
+        </button>
+        <button onclick="setScenario('syn_flood')" id="btn-syn_flood" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700">
+          DDoS Flood
+        </button>
+        <button onclick="setScenario('dns_tunnel')" id="btn-dns_tunnel" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700">
+          DNS Exfil
+        </button>
+      </div>
+
+      <!-- Play / Pause -->
+      <button onclick="toggleStream()" id="btn-stream" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-all shadow-sm">
+        <span id="stream-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="stream-text">Streaming (Live)</span>
+      </button>
+
+
+      <!-- Clear Data -->
+      <button onclick="clearData()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+        Reset
+      </button>
+    </div>
+  </header>
+
+  <!-- METRIC STATS TICKER -->
+  <div class="bg-slate-900 border-b border-slate-800/80 px-4 py-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
+    <div class="flex flex-col">
+      <span class="text-slate-400 text-[10px] uppercase font-semibold">Packets Ingested</span>
+      <span id="stat-total-pkts" class="font-mono text-sm font-bold text-white">0</span>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-slate-400 text-[10px] uppercase font-semibold">NetFlow Sessions</span>
+      <span id="stat-total-flows" class="font-mono text-sm font-bold text-blue-400">0</span>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-slate-400 text-[10px] uppercase font-semibold">Active Graph Nodes</span>
+      <span id="stat-graph-nodes" class="font-mono text-sm font-bold text-indigo-400">0 IPs</span>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-slate-400 text-[10px] uppercase font-semibold">GraphIDS MSE (Avg)</span>
+      <span id="stat-mean-mse" class="font-mono text-sm font-bold text-emerald-400">0.0120</span>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-slate-400 text-[10px] uppercase font-semibold">Operating Threshold</span>
+      <span class="font-mono text-sm font-bold text-amber-400">0.0420</span>
+    </div>
+    <div class="flex flex-col">
+      <span class="text-slate-400 text-[10px] uppercase font-semibold">Linux Firewall (IPS)</span>
+      <span id="stat-blocked-count" class="font-mono text-sm font-bold text-rose-400">0 Blocked</span>
+    </div>
+  </div>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="bg-slate-900/50 border-b border-slate-800 px-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
+    <button onclick="switchTab('network-tab')" id="nav-network-tab" class="py-2.5 border-b-2 border-blue-500 text-blue-400 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+      1. Network & Process Tab
+    </button>
+    <button onclick="switchTab('flow-tab')" id="nav-flow-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      2. NetFlow Aggregator
+    </button>
+    <button onclick="switchTab('graph-tab')" id="nav-graph-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      3. Topology & GeoIP
+    </button>
+    <button onclick="switchTab('graphids-tab')" id="nav-graphids-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+      4. GraphIDS AI Engine
+    </button>
+    <button onclick="switchTab('ips-tab')" id="nav-ips-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+      5. Linux Defense (IPS)
+    </button>
+    <button onclick="switchTab('lan-tab')" id="nav-lan-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+      6. LAN & ARP Scanner
+    </button>
+    <button onclick="switchTab('crafter-tab')" id="nav-crafter-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+      7. Packet Crafter Lab
+    </button>
+    <button onclick="switchTab('tcp-tab')" id="nav-tcp-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+      8. TCP Handshake Visualizer
+    </button>
+  </nav>
+
+
+  <!-- MAIN VIEWPORT -->
+  <main class="flex-1 p-4 max-w-7xl w-full mx-auto space-y-4">
+
+    <!-- TAB 1: NETWORK TAB (Packets & Deep OSI Inspector) -->
+    <div id="view-network-tab" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Packet Stream Table -->
+      <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h2 class="font-bold text-sm text-white">Live Packet Sniffer (Wireshark-Style)</h2>
+          </div>
+          <input type="text" id="packet-filter" oninput="applyPacketFilter()" placeholder="Filter IP, port, proto..." class="px-2.5 py-1 text-xs rounded bg-slate-800 border border-slate-700 text-slate-200 focus:outline-none focus:border-blue-500">
+        </div>
+
+        <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400">
+              <tr>
+                <th class="py-2 px-2">#</th>
+                <th class="py-2 px-2">Process (PID)</th>
+                <th class="py-2 px-2">Source IP</th>
+                <th class="py-2 px-2">Dest IP</th>
+                <th class="py-2 px-2">Proto</th>
+                <th class="py-2 px-2">Len</th>
+                <th class="py-2 px-2">Flags / Summary</th>
+              </tr>
+            </thead>
+            <tbody id="packet-table-body" class="divide-y divide-slate-800/80">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Deep Packet Header Inspector & Hex Viewer -->
+      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col space-y-3 shadow-sm">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <h2 class="font-bold text-sm text-white">OSI Layer & Hex Inspector</h2>
+          <span id="inspect-pkt-badge" class="text-xs font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Select a packet</span>
+        </div>
+
+        <div class="space-y-3 text-xs overflow-y-auto max-h-[440px] pr-1 font-mono">
+          <!-- Layer 2: Ethernet -->
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex justify-between items-center text-sky-400 font-bold mb-1">
+              <span>Layer 2: Ethernet II</span>
+              <span class="text-[10px] text-slate-400">14 Bytes</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Src MAC: <span id="insp-src-mac" class="text-white">-</span></div>
+              <div>Dst MAC: <span id="insp-dst-mac" class="text-white">-</span></div>
+              <div>EtherType: <span id="insp-eth-type" class="text-white">0x0800 (IPv4)</span></div>
+            </div>
+          </div>
+
+          <!-- Layer 3: IPv4 -->
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex justify-between items-center text-indigo-400 font-bold mb-1">
+              <span>Layer 3: IPv4 Header</span>
+              <span class="text-[10px] text-slate-400">20 Bytes</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Source IP: <span id="insp-src-ip" class="text-emerald-400 font-bold">-</span></div>
+              <div>Dest IP: <span id="insp-dst-ip" class="text-purple-400 font-bold">-</span></div>
+              <div>TTL: <span id="insp-ttl" class="text-white">-</span></div>
+              <div>Protocol: <span id="insp-proto" class="text-white">-</span></div>
+              <div>Length: <span id="insp-len" class="text-white">-</span></div>
+            </div>
+          </div>
+
+          <!-- Layer 4: TCP / UDP -->
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="flex justify-between items-center text-amber-400 font-bold mb-1">
+              <span>Layer 4: Transport Header</span>
+              <span class="text-[10px] text-slate-400">20 Bytes</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Src Port: <span id="insp-src-port" class="text-white font-bold">-</span></div>
+              <div>Dst Port: <span id="insp-dst-port" class="text-white font-bold">-</span></div>
+              <div>Seq: <span id="insp-seq" class="text-white">-</span></div>
+              <div>Ack: <span id="insp-ack" class="text-white">-</span></div>
+            </div>
+            <div class="mt-2 pt-1 border-t border-slate-800">
+              <span class="text-[10px] text-slate-400">TCP Flags:</span>
+              <div id="insp-flags" class="flex flex-wrap gap-1 mt-1">
+                <!-- Flag chips -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Linux Process & Socket Inode Mapping -->
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-purple-500/30">
+            <div class="flex justify-between items-center text-purple-400 font-bold mb-1">
+              <span>Linux Process & Socket Inode</span>
+              <span id="insp-proc-pid" class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">No Process</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Binary: <span id="insp-proc-name" class="text-white font-bold">-</span></div>
+              <div>Socket Owner: <span id="insp-proc-user" class="text-white">user (local)</span></div>
+            </div>
+            <div class="mt-1 pt-1 border-t border-slate-800 text-[10px] text-slate-400 truncate">
+              Cmd: <span id="insp-proc-cmd" class="text-slate-300 font-mono">-</span>
+            </div>
+          </div>
+
+          <!-- GeoIP & ASN Threat Intelligence -->
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-emerald-500/30">
+            <div class="flex justify-between items-center text-emerald-400 font-bold mb-1">
+              <span>GeoIP & ASN Intelligence</span>
+              <span id="insp-geo-flag" class="text-sm">🌐</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+              <div>Org: <span id="insp-geo-org" class="text-white font-bold">-</span></div>
+              <div>ASN: <span id="insp-geo-asn" class="text-sky-400 font-mono">-</span></div>
+              <div>Country: <span id="insp-geo-country" class="text-white">-</span></div>
+              <div>Hostname: <span id="insp-geo-host" class="text-slate-400 truncate">-</span></div>
+            </div>
+          </div>
+
+          <!-- Payload Hex & ASCII -->
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1">
+            <span class="text-emerald-400 font-bold text-[11px]">Layer 7 / Payload Hex Dump:</span>
+            <div id="insp-hex" class="p-2 bg-black/60 rounded text-[10px] text-slate-300 break-all select-all font-mono">
+              (No packet selected)
+            </div>
+            <span class="text-slate-400 text-[10px]">ASCII Translation:</span>
+            <div id="insp-ascii" class="p-1.5 bg-black/40 rounded text-[10px] text-emerald-400/90 break-all select-all font-mono">
+              -
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: NETFLOW AGGREGATOR -->
+    <div id="view-flow-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base text-white">NetFlow v3 Dynamic Session Aggregator</h2>
+            <p class="text-xs text-slate-400">Converts thousands of packet streams into normalized 5-tuple statistical vectors for GraphIDS.</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono">
+            Active Table Size: <span id="flow-active-count">0</span>
+          </span>
+        </div>
+
+        <div class="overflow-x-auto max-h-[500px]">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400">
+              <tr>
+                <th class="py-2.5 px-3">Flow ID</th>
+                <th class="py-2.5 px-3">Src IP:Port</th>
+                <th class="py-2.5 px-3">Dst IP:Port</th>
+                <th class="py-2.5 px-3">Proto</th>
+                <th class="py-2.5 px-3">In/Out Bytes</th>
+                <th class="py-2.5 px-3">In/Out Pkts</th>
+                <th class="py-2.5 px-3">TCP Flags</th>
+                <th class="py-2.5 px-3">Duration (ms)</th>
+                <th class="py-2.5 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="flow-table-body" class="divide-y divide-slate-800/80">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: NETWORK GRAPH TOPOLOGY -->
+    <div id="view-graph-tab" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- Force-Directed Topology Canvas -->
+        <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col shadow-sm">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-2">
+            <div>
+              <h2 class="font-bold text-base text-white">Live Dynamic Network Graph</h2>
+              <p class="text-xs text-slate-400">IPs are nodes; active NetFlow sessions are directed edges. E-GraphSAGE embeds local neighborhoods.</p>
+            </div>
+            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+              Live Topology
+            </span>
+          </div>
+
+          <div class="relative w-full h-[450px] bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-center overflow-hidden">
+            <canvas id="topo-canvas" width="750" height="450" class="w-full h-full"></canvas>
+            <div class="absolute bottom-2 left-3 text-[10px] text-slate-400 bg-slate-900/80 backdrop-blur px-2.5 py-1 rounded border border-slate-800">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>Benign Client
+              <span class="inline-block w-2 h-2 rounded-full bg-indigo-400 ml-2 mr-1"></span>Server
+              <span class="inline-block w-2 h-2 rounded-full bg-amber-400 ml-2 mr-1"></span>Gateway
+              <span class="inline-block w-2 h-2 rounded-full bg-rose-500 ml-2 mr-1"></span>Attacker
+            </div>
+          </div>
+        </div>
+
+        <!-- Topological Analysis Pane -->
+        <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col space-y-3 shadow-sm text-xs">
+          <h2 class="font-bold text-sm text-white">Graph Structural Insights</h2>
+          
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
+            <span class="font-bold text-blue-400">Normal Topological Balance:</span>
+            <p class="text-slate-400">
+              Normal networks exhibit balanced, predictable in/out degree ratios. Clients talk to gateways and servers with bidirectional data flows.
+            </p>
+          </div>
+
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
+            <span class="font-bold text-rose-400">Port Scan Star Anomaly:</span>
+            <p class="text-slate-400">
+              A single node suddenly initiates dozens of high-speed unidirectional edges to multiple ports, breaking the learned graph embedding manifold.
+            </p>
+          </div>
+
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
+            <span class="font-bold text-amber-400">DDoS Influx Bottleneck:</span>
+            <p class="text-slate-400">
+              Multiple disparate IPs converge upon a single target server simultaneously, causing an acute in-degree spike.
+            </p>
+          </div>
+
+          <div class="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <span class="font-bold text-blue-400">E-GraphSAGE Message Passing:</span>
+            <p class="text-slate-300 mt-1 font-mono text-[11px]">
+              h_v = ReLU(W_neigh · MEAN({e_uv}))<br>
+              e'_uv = W_edge · [h_u || h_v]
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: GRAPHIDS AI ENGINE & ANOMALY GAUGE -->
+    <div id="view-graphids-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base text-white">GraphIDS Self-Supervised Anomaly Detector</h2>
+            <p class="text-xs text-slate-400">Trained on normal NetFlow traffic. Flow embeddings that fail autoencoder reconstruction are flagged as intrusions.</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30 font-mono">
+            Model: SAGELayer + Transformer Autoencoder
+          </span>
+        </div>
+
+        <!-- Gauge & Real-Time MSE Score -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div class="md:col-span-5 bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+            <div>
+              <span class="text-slate-400 text-xs uppercase font-semibold">Active Anomaly Status</span>
+              <div id="ai-status-badge" class="text-xl font-bold mt-1 text-emerald-400">BENIGN (NORMAL TRAFFIC)</div>
+              <p id="ai-status-desc" class="text-xs text-slate-400 mt-1">Flow embeddings reconstruct cleanly within the acceptable loss threshold.</p>
+            </div>
+
+            <div class="my-4">
+              <div class="flex justify-between text-xs font-mono mb-1">
+                <span>Current MSE: <strong id="ai-mse-text" class="text-emerald-400 font-bold">0.0124</strong></span>
+                <span class="text-slate-400">Threshold: 0.0420</span>
+              </div>
+              <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden relative">
+                <!-- Threshold Marker -->
+                <div class="absolute left-[42%] top-0 bottom-0 w-0.5 bg-rose-500 z-10" title="Threshold: 0.042"></div>
+                <div id="ai-mse-bar" class="h-full bg-emerald-500 transition-all duration-300 rounded-full" style="width: 12.4%;"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                <span>0.00</span>
+                <span class="text-rose-400">▲ Anomaly Cutoff (0.042)</span>
+                <span>0.10+</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-2 font-mono">
+              Inference Device: <span class="text-white">CPU / PyTorch 2.8</span> • Window: <span class="text-white">64 flows</span>
+            </div>
+          </div>
+
+          <!-- Flow-level Anomaly Scores Table -->
+          <div class="md:col-span-7 bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col">
+            <h3 class="font-bold text-xs text-white mb-2 uppercase tracking-wider text-slate-400">Per-Flow Reconstruction Scores</h3>
+            <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead class="sticky top-0 bg-slate-950 border-b border-slate-800 text-slate-400">
+                  <tr>
+                    <th class="py-1.5 px-2">Flow</th>
+                    <th class="py-1.5 px-2">Source → Dest</th>
+                    <th class="py-1.5 px-2">Proto</th>
+                    <th class="py-1.5 px-2">Reconstruction MSE</th>
+                    <th class="py-1.5 px-2">Verdict</th>
+                  </tr>
+                </thead>
+                <tbody id="ai-flow-table" class="divide-y divide-slate-800/80">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: LINUX ACTIVE DEFENSE (IPS) -->
+    <div id="view-ips-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base text-white">Linux Active Defense & Intrusion Prevention (IPS)</h2>
+            <p class="text-xs text-slate-400">Autonomous Linux kernel-level mitigation via dynamic <code class="text-blue-400 font-mono">nftables</code> and <code class="text-indigo-400 font-mono">iptables</code> rule injection.</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 font-mono">
+            Active Kernel Blocklist
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- Terminal-style Command Log -->
+          <div class="lg:col-span-7 bg-black p-4 rounded-xl border border-slate-800 font-mono text-xs flex flex-col space-y-2">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-slate-500">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                <span class="ml-2 text-slate-400">root@security-gateway:~#</span>
+              </div>
+              <span class="text-[10px] text-slate-500">journald: /var/log/graphids-ips.log</span>
+            </div>
+
+            <div id="ips-terminal-log" class="overflow-y-auto max-h-[340px] space-y-1.5 text-slate-300">
+              <div class="text-slate-500">[INFO] Linux IPS daemon initialized. Monitoring GraphIDS anomaly queue...</div>
+              <div class="text-slate-500">[INFO] Kernel table initialized: nft add table inet filter</div>
+              <div class="text-slate-500">[INFO] Block set ready: nft add set inet filter blocklist { type ipv4_addr; flags timeout; }</div>
+            </div>
+          </div>
+
+          <!-- Currently Blocked Attackers Table -->
+          <div class="lg:col-span-5 bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col space-y-3">
+            <h3 class="font-bold text-xs text-white uppercase tracking-wider text-slate-400">Currently Quarantined Hosts</h3>
+            <div class="overflow-y-auto max-h-[300px]">
+              <table class="w-full text-left text-xs font-mono">
+                <thead class="border-b border-slate-800 text-slate-400">
+                  <tr>
+                    <th class="py-1 px-2">Blocked IP</th>
+                    <th class="py-1 px-2">Reason</th>
+                    <th class="py-1 px-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="ips-blocked-table" class="divide-y divide-slate-800/80">
+                  <tr>
+                    <td colspan="3" class="py-4 text-center text-slate-500">No active kernel blocks.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: LOCAL LAN DEVICE & ARP SCANNER -->
+    <div id="view-lan-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h2 class="font-bold text-base text-white">Local Wi-Fi Subnet & ARP Device Discovery</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Discovers neighboring devices on your Wi-Fi LAN (<code class="text-blue-400 font-mono">10.138.114.0/24</code>), resolves Hardware OUI Vendors, and monitors ARP cache poisoning.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="loadLanDevices()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-all shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              Scan Subnet Now
+            </button>
+            <span id="lan-last-scan" class="text-[11px] text-slate-500 font-mono">Scanned: Just now</span>
+          </div>
+        </div>
+
+        <!-- ARP Spoof Alert Banner (Hidden by default, shown if spoof detected) -->
+        <div id="lan-arp-alert" class="hidden bg-rose-500/10 border border-rose-500/30 p-3 rounded-lg flex items-center gap-3 text-rose-300 text-xs">
+          <svg class="w-5 h-5 text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          <div>
+            <strong>CRITICAL SECURITY WARNING: Potential ARP Spoofing / MITM Attack Detected!</strong>
+            <div>A single MAC address is claiming ownership of multiple distinct IP addresses on your subnet.</div>
+          </div>
+        </div>
+
+        <!-- LAN Devices Table -->
+        <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-slate-400">
+              <tr>
+                <th class="py-2.5 px-3">IP Address</th>
+                <th class="py-2.5 px-3">MAC Hardware Address</th>
+                <th class="py-2.5 px-3">Device / OUI Vendor</th>
+                <th class="py-2.5 px-3">Subnet Role</th>
+                <th class="py-2.5 px-3">Interface</th>
+                <th class="py-2.5 px-3">ARP Poisoning Risk</th>
+                <th class="py-2.5 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="lan-devices-body" class="divide-y divide-slate-800/80">
+              <!-- Populated via loadLanDevices() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: INTERACTIVE PACKET CRAFTER LAB -->
+    <div id="view-crafter-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base text-white">Interactive Packet Crafter Lab</h2>
+            <p class="text-xs text-slate-400">Forge custom network packets with arbitrary TCP flags, TTL, and payloads. Send them directly through the GraphIDS AI engine to observe live anomaly detection.</p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono">
+            Direct Model Injection
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <!-- Left Column: Packet Forge Form -->
+          <div class="lg:col-span-6 bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4 text-xs font-mono">
+            <!-- Preset Quick Select -->
+            <div>
+              <label class="block text-slate-400 text-[11px] font-sans font-semibold mb-1.5 uppercase">Educational Presets</label>
+              <div class="flex flex-wrap gap-1.5">
+                <button onclick="setCrafterPreset('normal')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs">Clean HTTP SYN</button>
+                <button onclick="setCrafterPreset('xmas')" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs">XMAS Tree Scan</button>
+                <button onclick="setCrafterPreset('null')" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs">NULL Flags Scan</button>
+                <button onclick="setCrafterPreset('syn')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs">SYN Half-Open Probe</button>
+                <button onclick="setCrafterPreset('rst')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs">RST Teardown</button>
+              </div>
+            </div>
+
+            <!-- IP and Ports -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-400 text-[11px] font-sans mb-1">Source IP</label>
+                <input type="text" id="craft-src-ip" value="10.138.114.94" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-slate-400 text-[11px] font-sans mb-1">Source Port (0=Random)</label>
+                <input type="number" id="craft-src-port" value="0" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-slate-400 text-[11px] font-sans mb-1">Destination IP</label>
+                <input type="text" id="craft-dst-ip" value="10.0.0.1" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-slate-400 text-[11px] font-sans mb-1">Destination Port</label>
+                <input type="number" id="craft-dst-port" value="80" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <!-- Protocol & TTL -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-400 text-[11px] font-sans mb-1">Transport Protocol</label>
+                <select id="craft-proto" onchange="onCraftProtoChange()" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none">
+                  <option value="TCP">TCP (Transmission Control Protocol)</option>
+                  <option value="UDP">UDP (User Datagram Protocol)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 text-[11px] font-sans mb-1">Time-To-Live (TTL): <span id="craft-ttl-val" class="text-white font-bold">64</span></label>
+                <input type="range" id="craft-ttl" min="1" max="255" value="64" oninput="document.getElementById('craft-ttl-val').textContent = this.value" class="w-full accent-blue-500">
+              </div>
+            </div>
+
+            <!-- TCP Flags Checkboxes -->
+            <div id="craft-flags-container">
+              <label class="block text-slate-400 text-[11px] font-sans font-semibold mb-1 uppercase">TCP Header Control Flags</label>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="flag-syn" class="rounded accent-blue-500" checked>
+                  <span class="font-bold text-amber-400">SYN</span> <span class="text-[10px] text-slate-500">(0x02)</span>
+                </label>
+                <label class="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="flag-ack" class="rounded accent-blue-500">
+                  <span class="font-bold text-sky-400">ACK</span> <span class="text-[10px] text-slate-500">(0x10)</span>
+                </label>
+                <label class="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="flag-fin" class="rounded accent-blue-500">
+                  <span class="font-bold text-rose-400">FIN</span> <span class="text-[10px] text-slate-500">(0x01)</span>
+                </label>
+                <label class="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="flag-rst" class="rounded accent-blue-500">
+                  <span class="font-bold text-rose-400">RST</span> <span class="text-[10px] text-slate-500">(0x04)</span>
+                </label>
+                <label class="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="flag-psh" class="rounded accent-blue-500">
+                  <span class="font-bold text-purple-400">PSH</span> <span class="text-[10px] text-slate-500">(0x08)</span>
+                </label>
+                <label class="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800 cursor-pointer hover:border-slate-700">
+                  <input type="checkbox" id="flag-urg" class="rounded accent-blue-500">
+                  <span class="font-bold text-emerald-400">URG</span> <span class="text-[10px] text-slate-500">(0x20)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Custom Payload String -->
+            <div>
+              <label class="block text-slate-400 text-[11px] font-sans mb-1">Payload ASCII String</label>
+              <input type="text" id="craft-payload" value="PROTOTYPE_SECURITY_AUDIT_PACKET" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-emerald-400 font-mono text-xs focus:outline-none focus:border-blue-500">
+            </div>
+
+            <!-- Submit Button -->
+            <button onclick="craftAndSendPacket()" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              ⚡ Dispatch Packet & Test Against GraphIDS
+            </button>
+          </div>
+
+          <!-- Right Column: GraphIDS Live AI Analysis -->
+          <div class="lg:col-span-6 bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between space-y-3 font-mono text-xs">
+            <div>
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                <span class="font-bold text-slate-300 uppercase tracking-wider text-[11px]">AI Model Verdict & Reconstruction Error</span>
+                <span id="craft-result-time" class="text-slate-500 text-[10px]">Awaiting injection...</span>
+              </div>
+
+              <div id="craft-verdict-box" class="p-3 rounded-lg bg-slate-900 border border-slate-800 mb-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 text-xs">Verdict:</span>
+                  <span id="craft-verdict-badge" class="px-2.5 py-1 rounded font-bold text-xs bg-slate-800 text-slate-400">READY</span>
+                </div>
+                <div class="mt-2 text-[11px] text-slate-300" id="craft-verdict-desc">
+                  Select parameters or a preset on the left and click "Dispatch Packet" to feed this custom frame directly into GraphIDS.
+                </div>
+              </div>
+
+              <!-- Anomaly MSE Gauge -->
+              <div class="space-y-1 mb-3">
+                <div class="flex justify-between text-xs">
+                  <span>Reconstruction MSE: <strong id="craft-mse-val" class="text-slate-400">-</strong></span>
+                  <span class="text-slate-500">Threshold: 0.0420</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden relative">
+                  <div class="absolute left-[42%] top-0 bottom-0 w-0.5 bg-rose-500 z-10"></div>
+                  <div id="craft-mse-bar" class="h-full bg-slate-600 transition-all duration-300 rounded-full" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Dissected Frame Details -->
+              <div class="space-y-1.5 text-[11px] bg-black/40 p-3 rounded-lg border border-slate-800/80">
+                <div class="text-slate-400 font-bold mb-1 border-b border-slate-800 pb-1">Dissected Frame Header:</div>
+                <div>Flow 5-Tuple: <span id="craft-detail-tuple" class="text-white">-</span></div>
+                <div>TCP Flags Hex: <span id="craft-detail-flags" class="text-amber-400">-</span></div>
+                <div>Payload Hex: <span id="craft-detail-hex" class="text-emerald-400 break-all select-all font-mono">-</span></div>
+                <div>Linux IPS Action: <span id="craft-detail-action" class="text-sky-400 font-bold">-</span></div>
+              </div>
+            </div>
+
+            <div class="text-[10px] text-slate-500 border-t border-slate-800 pt-2">
+              GraphIDS Autoencoder performs relational graph convolutions across flows. An abnormal combination of flags (like Xmas or NULL) distorts the NetFlow feature embedding, causing autoencoder reconstruction loss to exceed the 0.042 cutoff.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 8: TCP 3-WAY HANDSHAKE & STATE MACHINE VISUALIZER -->
+    <div id="view-tcp-tab" class="hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+              <h2 class="font-bold text-base text-white">Interactive TCP 3-Way Handshake & State Machine Visualizer</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Explore how Linux kernel sockets establish, maintain, and terminate reliable TCP connections (<code class="text-emerald-400 font-mono">SYN</code> → <code class="text-amber-400 font-mono">SYN-ACK</code> → <code class="text-sky-400 font-mono">ACK</code>).</p>
+          </div>
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="tcpHandshakeNext()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-all shadow-sm">
+              <span>Next Step</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </button>
+            <button onclick="tcpAutoPlay()" id="btn-tcp-autoplay" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
+              ▶ Auto-Play
+            </button>
+            <button onclick="tcpHandshakeReset()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all">
+              ↺ Reset
+            </button>
+            <button onclick="tcpSimulateSynFlood()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 transition-all">
+              ⚠️ Simulate SYN Flood
+            </button>
+          </div>
+        </div>
+
+        <!-- Visual Handshake Arena -->
+        <div class="bg-slate-950 p-6 rounded-xl border border-slate-800 relative">
+          <!-- Hosts Column Headers -->
+          <div class="grid grid-cols-2 gap-8 mb-6 font-mono text-xs">
+            <!-- Client Box -->
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-center">
+              <div class="flex items-center justify-center gap-2 mb-1">
+                <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                <span class="font-bold text-white text-sm">Client (Local Host)</span>
+              </div>
+              <div class="text-emerald-400">10.138.114.94:52341</div>
+              <div class="mt-2 text-[11px] text-slate-400">
+                Linux Kernel State: <span id="tcp-client-state" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">CLOSED</span>
+              </div>
+            </div>
+
+            <!-- Server Box -->
+            <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-center">
+              <div class="flex items-center justify-center gap-2 mb-1">
+                <span class="w-3 h-3 rounded-full bg-indigo-400"></span>
+                <span class="font-bold text-white text-sm">Server (Remote Host)</span>
+              </div>
+              <div class="text-indigo-400">10.0.0.1:80 (HTTP)</div>
+              <div class="mt-2 text-[11px] text-slate-400">
+                Linux Kernel State: <span id="tcp-server-state" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">LISTEN</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step Progression Progress Bar -->
+          <div class="flex justify-between items-center mb-6 px-4">
+            <div id="step-dot-1" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">1</div>
+            <div id="step-line-1" class="flex-1 h-1 bg-slate-800 mx-2"></div>
+            <div id="step-dot-2" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">2</div>
+            <div id="step-line-2" class="flex-1 h-1 bg-slate-800 mx-2"></div>
+            <div id="step-dot-3" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">3</div>
+            <div id="step-line-3" class="flex-1 h-1 bg-slate-800 mx-2"></div>
+            <div id="step-dot-4" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">4</div>
+            <div id="step-line-4" class="flex-1 h-1 bg-slate-800 mx-2"></div>
+            <div id="step-dot-5" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">5</div>
+          </div>
+
+          <!-- Active Packet Transmission Animation Track -->
+          <div class="relative h-20 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center px-8 mb-6 overflow-hidden">
+            <div id="tcp-packet-transit" class="absolute transition-all duration-700 ease-out flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white font-mono text-xs shadow-lg" style="left: 10%;">
+              <span id="tcp-packet-arrow">➔</span>
+              <span id="tcp-packet-label" class="font-bold">SYN</span>
+              <span id="tcp-packet-seq" class="text-[10px] text-blue-200">Seq=1000 Ack=0</span>
+            </div>
+          </div>
+
+          <!-- Educational Explanation & Kernel Deep-Dive -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <div class="text-amber-400 font-bold mb-1.5 uppercase text-[11px] font-sans">Current Protocol State & Mechanics</div>
+              <div id="tcp-explanation-text" class="text-slate-300 leading-relaxed text-[11px]">
+                Click "Next Step" to initiate the connection. The Client will forge an initial TCP packet with the SYN flag set and pick an Initial Sequence Number (ISN).
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+              <div class="text-indigo-400 font-bold mb-1.5 uppercase text-[11px] font-sans">GraphIDS AI & Cyber Perspective</div>
+              <div id="tcp-security-text" class="text-slate-300 leading-relaxed text-[11px]">
+                A completed 3-way handshake demonstrates legitimate mutual intent. Conversely, if an IP sends high volumes of SYN packets without ever completing the handshake with an ACK, GraphIDS flags it immediately as a SYN Flood or Port Scan.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let isStreaming = true;
+    let currentScenario = 'normal';
+    let currentTab = 'network-tab';
+
+    // State storage
+    const state = {
+      packets: [],
+      flows: [],
+      nodes: [],
+      edges: [],
+      ipsEvents: [],
+      blockedIps: new Set(),
+      selectedPacket: null,
+      totalPackets: 0,
+      totalFlows: 0,
+      meanMse: 0.0124
+    };
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      currentTab = tabId;
+      ['network-tab', 'flow-tab', 'graph-tab', 'graphids-tab', 'ips-tab', 'lan-tab', 'crafter-tab', 'tcp-tab'].forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        if (!view || !nav) return;
+        if (t === tabId) {
+          view.classList.remove('hidden');
+          nav.classList.add('border-blue-500', 'text-blue-400');
+          nav.classList.remove('border-transparent', 'text-slate-400');
+        } else {
+          view.classList.add('hidden');
+          nav.classList.remove('border-blue-500', 'text-blue-400');
+          nav.classList.add('border-transparent', 'text-slate-400');
+        }
+      });
+      if (tabId === 'graph-tab') {
+        drawTopology();
+      }
+      if (tabId === 'lan-tab') {
+        loadLanDevices();
+      }
+      if (tabId === 'tcp-tab') {
+        updateTcpVisualizer();
+      }
+    }
+
+    // Scenario Switching
+    function setScenario(scenarioKey) {
+      currentScenario = scenarioKey;
+      fetch('/api/scenario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: scenarioKey })
+      }).catch(e => console.error(e));
+
+      ['normal', 'syn_scan', 'syn_flood', 'dns_tunnel'].forEach(k => {
+        const btn = document.getElementById(`btn-${k}`);
+        if (k === scenarioKey) {
+          btn.className = "px-2.5 py-1 text-xs font-medium rounded-md transition-all shadow-sm " + 
+            (k === 'normal' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white');
+        } else {
+          btn.className = "px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700";
+        }
+      });
+    }
+
+    // Data Source Switching (Simulated vs Live Interface)
+    function setSource(sourceKey) {
+      fetch('/api/source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: sourceKey, interface: 'wlo1' })
+      })
+      .then(res => res.json())
+      .then(data => {
+        updateSourceButtons(data.source);
+      })
+      .catch(e => console.error("Error setting source:", e));
+    }
+
+    function updateSourceButtons(source) {
+      const btnSim = document.getElementById('btn-src-sim');
+      const btnLive = document.getElementById('btn-src-live');
+      const scenarioBox = document.getElementById('scenario-box');
+
+      if (source === 'live') {
+        btnLive.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-emerald-600 text-white shadow-sm flex items-center gap-1.5";
+        btnSim.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700 flex items-center gap-1";
+        if (scenarioBox) scenarioBox.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        btnSim.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-blue-600 text-white shadow-sm flex items-center gap-1";
+        btnLive.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700 flex items-center gap-1.5";
+        if (scenarioBox) scenarioBox.classList.remove('opacity-40', 'pointer-events-none');
+      }
+    }
+
+
+    // Toggle Stream Pause/Play
+    function toggleStream() {
+      isStreaming = !isStreaming;
+      const text = document.getElementById('stream-text');
+      const ind = document.getElementById('stream-indicator');
+      const btn = document.getElementById('btn-stream');
+      if (isStreaming) {
+        text.textContent = "Streaming (Live)";
+        ind.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-all shadow-sm";
+      } else {
+        text.textContent = "Paused";
+        ind.className = "w-2 h-2 rounded-full bg-amber-400";
+        btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center gap-1.5 transition-all";
+      }
+    }
+
+    function clearData() {
+      state.packets = [];
+      state.flows = [];
+      state.nodes = [];
+      state.edges = [];
+      state.ipsEvents = [];
+      state.blockedIps.clear();
+      state.totalPackets = 0;
+      state.totalFlows = 0;
+      state.meanMse = 0.0124;
+      renderAll();
+    }
+
+    // Periodic Data Polling from backend
+    async function pollData() {
+      if (!isStreaming) return;
+      try {
+        const res = await fetch('/api/telemetry');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        // Update state
+        if (data.packet) {
+          state.packets.unshift(data.packet);
+          if (state.packets.length > 80) state.packets.pop();
+          state.totalPackets++;
+          if (!state.selectedPacket) {
+            inspectPacket(data.packet);
+          }
+        }
+
+        if (data.flows) {
+          state.flows = data.flows;
+          state.totalFlows = data.flows.length;
+        }
+
+        if (data.topology) {
+          state.nodes = data.topology.nodes || [];
+          state.edges = data.topology.edges || [];
+        }
+
+        if (data.ai_results) {
+          state.aiResults = data.ai_results;
+          state.meanMse = data.mean_mse || 0.0124;
+        }
+
+        if (data.ips_status) {
+          state.ipsStatus = data.ips_status;
+        }
+
+        renderAll();
+      } catch (err) {
+        console.error("Telemetry fetch error:", err);
+      }
+    }
+
+    function renderAll() {
+      // 1. Ticker Stats
+      document.getElementById('stat-total-pkts').textContent = state.totalPackets;
+      document.getElementById('stat-total-flows').textContent = state.totalFlows;
+      document.getElementById('stat-graph-nodes').textContent = `${state.nodes.length} IPs`;
+      document.getElementById('stat-mean-mse').textContent = state.meanMse.toFixed(4);
+      document.getElementById('stat-blocked-count').textContent = `${state.ipsStatus ? state.ipsStatus.blocked_count : 0} Blocked`;
+
+      const mseColor = state.meanMse > 0.042 ? 'text-rose-400' : 'text-emerald-400';
+      document.getElementById('stat-mean-mse').className = `font-mono text-sm font-bold ${mseColor}`;
+
+      // 2. Packet Table
+      renderPacketTable();
+
+      // 3. Flow Table
+      renderFlowTable();
+
+      // 4. Graph Topology
+      if (currentTab === 'graph-tab') {
+        drawTopology();
+      }
+
+      // 5. AI Anomaly Tab
+      renderAiTab();
+
+      // 6. IPS Defense Tab
+      renderIpsTab();
+    }
+
+    function renderPacketTable() {
+      const tbody = document.getElementById('packet-table-body');
+      const filter = (document.getElementById('packet-filter').value || '').toLowerCase();
+      tbody.innerHTML = '';
+
+      state.packets.forEach(p => {
+        const procName = p.process ? p.process.name : '';
+        const geoOrg = p.geoip ? (p.geoip.org || p.geoip.country) : '';
+        if (filter && !p.src_ip.includes(filter) && !p.dst_ip.includes(filter) && !p.protocol_name.toLowerCase().includes(filter) && !procName.toLowerCase().includes(filter) && !geoOrg.toLowerCase().includes(filter)) {
+          return;
+        }
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/60 cursor-pointer transition-colors " + 
+          (state.selectedPacket && state.selectedPacket.id === p.id ? "bg-slate-800/80" : "");
+        tr.onclick = () => inspectPacket(p);
+
+        let protoBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400">${p.protocol_name}</span>`;
+        if (p.protocol_name === 'HTTP') protoBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">HTTP</span>`;
+        if (p.protocol_name === 'DNS') protoBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">DNS</span>`;
+
+        let procBadge = `<span class="text-slate-500 text-[10px]">-</span>`;
+        if (p.process && p.process.name) {
+          procBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/30" title="${p.process.cmdline || p.process.name}">
+            ${p.process.name} <span class="text-purple-400 text-[9px]">[${p.process.pid}]</span>
+          </span>`;
+        }
+
+        let geoBadge = '';
+        if (p.geoip && p.geoip.country && p.geoip.country !== 'Unknown') {
+          geoBadge = `<span class="text-[10px] text-slate-400 ml-1" title="${p.geoip.org} (${p.geoip.asn})">${p.geoip.flag} ${p.geoip.country}</span>`;
+        }
+
+        let flagPills = (p.tcp_flags || []).map(f => {
+          let c = 'bg-slate-700 text-slate-300';
+          if (f === 'SYN') c = 'bg-amber-500/20 text-amber-400 font-bold';
+          if (f === 'RST') c = 'bg-rose-500/20 text-rose-400 font-bold';
+          return `<span class="px-1 py-0.2 rounded text-[9px] ${c}">${f}</span>`;
+        }).join(" ");
+
+        tr.innerHTML = `
+          <td class="py-1.5 px-2 text-slate-500">${p.id}</td>
+          <td class="py-1.5 px-2">${procBadge}</td>
+          <td class="py-1.5 px-2 text-emerald-400">${p.src_ip}:${p.src_port}</td>
+          <td class="py-1.5 px-2 text-indigo-400">${p.dst_ip}:${p.dst_port} ${geoBadge}</td>
+          <td class="py-1.5 px-2">${protoBadge}</td>
+          <td class="py-1.5 px-2">${p.length}</td>
+          <td class="py-1.5 px-2 text-slate-300">${flagPills} <span class="text-slate-400 text-[10px] ml-1">${p.info}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function inspectPacket(p) {
+      state.selectedPacket = p;
+      document.getElementById('inspect-pkt-badge').textContent = `Packet #${p.id} (${p.protocol_name})`;
+      document.getElementById('insp-src-mac').textContent = p.src_mac;
+      document.getElementById('insp-dst-mac').textContent = p.dst_mac;
+      document.getElementById('insp-eth-type').textContent = p.eth_type;
+
+      document.getElementById('insp-src-ip').textContent = p.src_ip;
+      document.getElementById('insp-dst-ip').textContent = p.dst_ip;
+      document.getElementById('insp-ttl').textContent = `${p.ttl} (Linux Hops)`;
+      document.getElementById('insp-proto').textContent = `${p.protocol_num} (${p.protocol_name})`;
+      document.getElementById('insp-len').textContent = `${p.length} Bytes`;
+
+      document.getElementById('insp-src-port').textContent = p.src_port;
+      document.getElementById('insp-dst-port').textContent = p.dst_port;
+      document.getElementById('insp-seq').textContent = p.tcp_seq !== null ? p.tcp_seq : '-';
+      document.getElementById('insp-ack').textContent = p.tcp_ack !== null ? p.tcp_ack : '-';
+
+      const flagsBox = document.getElementById('insp-flags');
+      flagsBox.innerHTML = '';
+      (p.tcp_flags || []).forEach(f => {
+        const span = document.createElement('span');
+        span.className = "px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold text-[10px]";
+        span.textContent = f;
+        flagsBox.appendChild(span);
+      });
+
+      // Linux Process Info
+      if (p.process) {
+        document.getElementById('insp-proc-pid').textContent = `PID ${p.process.pid}`;
+        document.getElementById('insp-proc-name').textContent = p.process.name;
+        document.getElementById('insp-proc-cmd').textContent = p.process.cmdline || p.process.name;
+      } else {
+        document.getElementById('insp-proc-pid').textContent = "No Process";
+        document.getElementById('insp-proc-name').textContent = "-";
+        document.getElementById('insp-proc-cmd').textContent = "-";
+      }
+
+      // GeoIP & Threat Intel
+      if (p.geoip) {
+        document.getElementById('insp-geo-flag').textContent = p.geoip.flag || "🌐";
+        document.getElementById('insp-geo-org').textContent = p.geoip.org || "-";
+        document.getElementById('insp-geo-asn').textContent = p.geoip.asn || "-";
+        document.getElementById('insp-geo-country').textContent = p.geoip.country || "-";
+        document.getElementById('insp-geo-host').textContent = p.geoip.hostname || "-";
+      } else {
+        document.getElementById('insp-geo-flag').textContent = "🌐";
+        document.getElementById('insp-geo-org').textContent = "-";
+        document.getElementById('insp-geo-asn').textContent = "-";
+        document.getElementById('insp-geo-country').textContent = "-";
+        document.getElementById('insp-geo-host').textContent = "-";
+      }
+
+      document.getElementById('insp-hex').textContent = p.payload_hex || "(No payload data)";
+      document.getElementById('insp-ascii').textContent = p.payload_ascii || "-";
+    }
+
+    function renderFlowTable() {
+      const tbody = document.getElementById('flow-table-body');
+      tbody.innerHTML = '';
+      document.getElementById('flow-active-count').textContent = state.flows.length;
+
+      state.flows.forEach(f => {
+        const tr = document.createElement('tr');
+        const isAnom = f.is_attack;
+        tr.innerHTML = `
+          <td class="py-2 px-3 text-slate-400">${f.flow_id}</td>
+          <td class="py-2 px-3 text-emerald-400">${f.src_ip}:${f.src_port}</td>
+          <td class="py-2 px-3 text-indigo-400">${f.dst_ip}:${f.dst_port}</td>
+          <td class="py-2 px-3">${f.protocol}</td>
+          <td class="py-2 px-3">${f.in_bytes} / ${f.out_bytes}</td>
+          <td class="py-2 px-3">${f.in_pkts} / ${f.out_pkts}</td>
+          <td class="py-2 px-3 text-amber-400">${f.tcp_flags_str || 'NONE'}</td>
+          <td class="py-2 px-3">${f.duration_ms.toFixed(1)}</td>
+          <td class="py-2 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isAnom ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+              ${isAnom ? 'ANOMALOUS' : 'BENIGN'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAiTab() {
+      const isAnom = state.meanMse > 0.042;
+      const statusBadge = document.getElementById('ai-status-badge');
+      const statusDesc = document.getElementById('ai-status-desc');
+      const mseText = document.getElementById('ai-mse-text');
+      const mseBar = document.getElementById('ai-mse-bar');
+
+      if (isAnom) {
+        statusBadge.textContent = "INTRUSION DETECTED (ANOMALOUS GRAPH)";
+        statusBadge.className = "text-xl font-bold mt-1 text-rose-400";
+        statusDesc.textContent = "Reconstruction error spiked significantly above 0.0420! The dynamic graph structure violates benign traffic bounds.";
+        mseText.className = "text-rose-400 font-bold";
+        mseBar.className = "h-full bg-rose-500 transition-all duration-300 rounded-full";
+      } else {
+        statusBadge.textContent = "BENIGN (NORMAL TRAFFIC)";
+        statusBadge.className = "text-xl font-bold mt-1 text-emerald-400";
+        statusDesc.textContent = "Flow embeddings reconstruct cleanly within the acceptable loss threshold.";
+        mseText.className = "text-emerald-400 font-bold";
+        mseBar.className = "h-full bg-emerald-500 transition-all duration-300 rounded-full";
+      }
+
+      mseText.textContent = state.meanMse.toFixed(4);
+      const pct = Math.min(100, (state.meanMse / 0.1) * 100);
+      mseBar.style.width = `${pct}%`;
+
+      // Flow table
+      const tbody = document.getElementById('ai-flow-table');
+      tbody.innerHTML = '';
+      (state.aiResults || []).slice(0, 15).forEach(r => {
+        const tr = document.createElement('tr');
+        const anom = r.is_anomaly;
+        tr.innerHTML = `
+          <td class="py-1 px-2 text-slate-400">${r.flow_id}</td>
+          <td class="py-1 px-2">${r.src_ip} → ${r.dst_ip}</td>
+          <td class="py-1 px-2">${r.protocol}</td>
+          <td class="py-1 px-2 font-bold ${anom ? 'text-rose-400' : 'text-emerald-400'}">${r.mse.toFixed(4)}</td>
+          <td class="py-1 px-2">
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${anom ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}">
+              ${anom ? 'FLAGGED' : 'PASS'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderIpsTab() {
+      if (!state.ipsStatus) return;
+      const logBox = document.getElementById('ips-terminal-log');
+      const table = document.getElementById('ips-blocked-table');
+
+      // Update terminal log if new events
+      (state.ipsStatus.recent_events || []).slice(0, 8).forEach(ev => {
+        const lineId = `log-${ev.ip}-${Math.floor(ev.timestamp)}`;
+        if (!document.getElementById(lineId)) {
+          const div = document.createElement('div');
+          div.id = lineId;
+          div.className = "text-rose-400 font-mono text-[11px] animate-pulse-slow";
+          div.innerHTML = `
+            <span class="text-amber-400">[IPS-ALERT]</span> High MSE (${ev.mse.toFixed(4)}) on ${ev.ip} (${ev.reason})<br>
+            <span class="text-emerald-400"># Executed:</span> ${ev.nft_command}
+          `;
+          logBox.appendChild(div);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+      });
+
+      // Update blocked hosts table
+      table.innerHTML = '';
+      if (state.ipsStatus.blocked_ips && state.ipsStatus.blocked_ips.length > 0) {
+        state.ipsStatus.blocked_ips.forEach(ip => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-1.5 px-2 text-rose-400 font-bold">${ip}</td>
+            <td class="py-1.5 px-2 text-slate-300">GraphIDS Anomaly</td>
+            <td class="py-1.5 px-2">
+              <button onclick="unblockIp('${ip}')" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px]">
+                Unblock
+              </button>
+            </td>
+          `;
+          table.appendChild(tr);
+        });
+      } else {
+        table.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-500">No active kernel blocks.</td></tr>`;
+      }
+    }
+
+    function unblockIp(ip) {
+      fetch(`/api/unblock?ip=${encodeURIComponent(ip)}`, { method: 'POST' });
+    }
+
+    // Force Topology Canvas Drawing
+    function drawTopology() {
+      const canvas = document.getElementById('topo-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Helper to truncate long IPv6 addresses cleanly
+      function formatIp(ip) {
+        if (!ip) return '';
+        if (ip.length > 18) {
+          return ip.slice(0, 7) + '..' + ip.slice(-5);
+        }
+        return ip;
+      }
+
+      // Dynamic Radial Layout: "My Machine" at the center, peers in a wide orbit
+      const nodePos = {};
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const rx = w * 0.38;
+      const ry = h * 0.35;
+
+      const localNodes = state.nodes.filter(n => n.role && n.role.includes("Local"));
+      const otherNodes = state.nodes.filter(n => !n.role || !n.role.includes("Local"));
+
+      // Position local machine(s) in center
+      if (localNodes.length > 0) {
+        localNodes.forEach((n, idx) => {
+          const offsetX = (idx - (localNodes.length - 1) / 2) * 60;
+          nodePos[n.id] = { x: centerX + offsetX, y: centerY, ...n };
+        });
+      }
+
+      // Position remaining nodes around an elliptical orbit
+      const numOthers = otherNodes.length;
+      otherNodes.forEach((n, idx) => {
+        const angle = (idx / Math.max(1, numOthers)) * Math.PI * 2 - Math.PI / 2;
+        const x = centerX + rx * Math.cos(angle);
+        const y = centerY + ry * Math.sin(angle);
+        nodePos[n.id] = { x, y, ...n };
+      });
+
+      // Draw Edges
+      state.edges.slice(0, 35).forEach(e => {
+        const src = nodePos[e.source];
+        const dst = nodePos[e.target];
+        if (src && dst) {
+          ctx.beginPath();
+          ctx.moveTo(src.x, src.y);
+          ctx.lineTo(dst.x, dst.y);
+          ctx.lineWidth = e.is_attack ? 2.5 : 1.5;
+          ctx.strokeStyle = e.is_attack ? 'rgba(244, 63, 94, 0.85)' : 'rgba(56, 189, 248, 0.5)';
+          if (e.is_attack) {
+            ctx.setLineDash([5, 3]);
+          } else {
+            ctx.setLineDash([]);
+          }
+          ctx.stroke();
+
+          // Flow port label
+          const midX = (src.x + dst.x) / 2;
+          const midY = (src.y + dst.y) / 2;
+          ctx.fillStyle = e.is_attack ? '#f43f5e' : '#94a3b8';
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(`:${e.dst_port}`, midX, midY - 3);
+        }
+      });
+
+      // Draw Nodes
+      state.nodes.forEach(n => {
+        const pos = nodePos[n.id];
+        if (!pos) return;
+
+        let fill = '#10b981'; // Green (Client / Local)
+        let stroke = '#059669';
+        if (n.type === 'attacker') {
+          fill = '#f43f5e'; // Red (Attacker)
+          stroke = '#e11d48';
+        } else if (n.type === 'server') {
+          fill = '#6366f1'; // Indigo (Server / Cloud)
+          stroke = '#4f46e5';
+        } else if (n.type === 'gateway') {
+          fill = '#f59e0b'; // Amber (Gateway / DNS)
+          stroke = '#d97706';
+        }
+
+        // Pulse ring for local machine or threat
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.globalAlpha = 0.2;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        // Core node circle
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 14, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // Role title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(pos.role || 'Host', pos.x, pos.y + 26);
+
+        // Truncated IP label
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px monospace';
+        ctx.fillText(formatIp(pos.id), pos.x, pos.y + 38);
+      });
+
+    }
+
+    // ==========================================
+    // TAB 6: LOCAL LAN DEVICE SCANNER
+    // ==========================================
+    async function loadLanDevices() {
+      const tbody = document.getElementById('lan-devices-body');
+      const timeSpan = document.getElementById('lan-last-scan');
+      const alertBox = document.getElementById('lan-arp-alert');
+      try {
+        const res = await fetch('/api/lan');
+        if (!res.ok) return;
+        const data = await res.json();
+        const devices = data.devices || [];
+        
+        tbody.innerHTML = '';
+        let hasSpoof = false;
+
+        devices.forEach(d => {
+          if (d.arp_spoof_risk) hasSpoof = true;
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-800/60";
+
+          const spoofBadge = d.arp_spoof_risk
+            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">⚠️ SPOOF SUSPECT</span>`
+            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">NORMAL</span>`;
+
+          const roleBadge = d.is_gateway
+            ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400">DEFAULT GATEWAY</span>`
+            : `<span class="text-slate-400 text-[11px]">LAN Neighbor</span>`;
+
+          tr.innerHTML = `
+            <td class="py-2.5 px-3 text-emerald-400 font-bold">${d.ip}</td>
+            <td class="py-2.5 px-3 text-slate-300 font-mono">${d.mac}</td>
+            <td class="py-2.5 px-3 text-white font-medium">${d.vendor}</td>
+            <td class="py-2.5 px-3">${roleBadge}</td>
+            <td class="py-2.5 px-3 text-slate-400">${d.interface}</td>
+            <td class="py-2.5 px-3">${spoofBadge}</td>
+            <td class="py-2.5 px-3"><span class="w-2 h-2 rounded-full inline-block bg-emerald-400 mr-1.5"></span><span class="text-emerald-400 font-bold text-[10px]">ONLINE</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        if (alertBox) {
+          if (hasSpoof) alertBox.classList.remove('hidden');
+          else alertBox.classList.add('hidden');
+        }
+
+        if (timeSpan) {
+          const now = new Date();
+          timeSpan.textContent = `Scanned: ${now.toLocaleTimeString()} (${devices.length} devices)`;
+        }
+      } catch (err) {
+        console.error("LAN fetch error:", err);
+      }
+    }
+
+    // ==========================================
+    // TAB 7: PACKET CRAFTER LAB
+    // ==========================================
+    function onCraftProtoChange() {
+      const proto = document.getElementById('craft-proto').value;
+      const flagsBox = document.getElementById('craft-flags-container');
+      if (proto === 'UDP') {
+        flagsBox.classList.add('opacity-40', 'pointer-events-none');
+      } else {
+        flagsBox.classList.remove('opacity-40', 'pointer-events-none');
+      }
+    }
+
+    function setCrafterPreset(preset) {
+      document.getElementById('craft-proto').value = "TCP";
+      onCraftProtoChange();
+
+      // Clear all flags first
+      ['syn', 'ack', 'fin', 'rst', 'psh', 'urg'].forEach(f => {
+        document.getElementById(`flag-${f}`).checked = false;
+      });
+
+      if (preset === 'normal') {
+        document.getElementById('flag-syn').checked = true;
+        document.getElementById('craft-payload').value = "GET /index.html HTTP/1.1";
+        document.getElementById('craft-dst-port').value = 80;
+      } else if (preset === 'xmas') {
+        document.getElementById('flag-fin').checked = true;
+        document.getElementById('flag-psh').checked = true;
+        document.getElementById('flag-urg').checked = true;
+        document.getElementById('craft-payload').value = "XMAS_TREE_PROBE_SCAN";
+        document.getElementById('craft-dst-port').value = 445;
+      } else if (preset === 'null') {
+        document.getElementById('craft-payload').value = "NULL_SCAN_EVASION_TEST";
+        document.getElementById('craft-dst-port').value = 22;
+      } else if (preset === 'syn') {
+        document.getElementById('flag-syn').checked = true;
+        document.getElementById('craft-payload').value = "SYN_STEALTH_PROBE";
+        document.getElementById('craft-dst-port').value = 3389;
+      } else if (preset === 'rst') {
+        document.getElementById('flag-rst').checked = true;
+        document.getElementById('craft-payload').value = "RESET_CONNECTION_TERMINATION";
+        document.getElementById('craft-dst-port').value = 80;
+      }
+    }
+
+    async function craftAndSendPacket() {
+      const src_ip = document.getElementById('craft-src-ip').value.trim();
+      const src_port = parseInt(document.getElementById('craft-src-port').value, 10) || 0;
+      const dst_ip = document.getElementById('craft-dst-ip').value.trim();
+      const dst_port = parseInt(document.getElementById('craft-dst-port').value, 10) || 80;
+      const protocol = document.getElementById('craft-proto').value;
+      const ttl = parseInt(document.getElementById('craft-ttl').value, 10) || 64;
+      const payload_text = document.getElementById('craft-payload').value;
+
+      const flags = [];
+      if (protocol === 'TCP') {
+        ['syn', 'ack', 'fin', 'rst', 'psh', 'urg'].forEach(f => {
+          if (document.getElementById(`flag-${f}`).checked) {
+            flags.push(f.toUpperCase());
+          }
+        });
+      }
+
+      const body = {
+        src_ip,
+        src_port,
+        dst_ip,
+        dst_port,
+        protocol,
+        ttl,
+        flags,
+        payload_text
+      };
+
+      try {
+        const res = await fetch('/api/craft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const r = data.result;
+
+        document.getElementById('craft-result-time').textContent = `Injected at ${new Date().toLocaleTimeString()}`;
+        const mse = r.mean_mse || 0;
+        document.getElementById('craft-mse-val').textContent = mse.toFixed(4);
+
+        const pct = Math.min(100, (mse / 0.1) * 100);
+        const mseBar = document.getElementById('craft-mse-bar');
+        mseBar.style.width = `${pct}%`;
+
+        const badge = document.getElementById('craft-verdict-badge');
+        const desc = document.getElementById('craft-verdict-desc');
+        const action = document.getElementById('craft-detail-action');
+
+        if (r.is_anomaly || mse > 0.042) {
+          badge.textContent = "INTRUSION DETECTED";
+          badge.className = "px-2.5 py-1 rounded font-bold text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30";
+          desc.textContent = `GraphIDS Autoencoder flagged this frame as an anomaly! High reconstruction error (${mse.toFixed(4)} > 0.042 threshold).`;
+          mseBar.className = "h-full bg-rose-500 transition-all duration-300 rounded-full";
+          action.textContent = "Autonomous nftables Quarantine Block Executed";
+          action.className = "text-rose-400 font-bold";
+        } else {
+          badge.textContent = "BENIGN (ACCEPTED)";
+          badge.className = "px-2.5 py-1 rounded font-bold text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+          desc.textContent = `Normal packet structure. Graph embeddings reconstructed cleanly (${mse.toFixed(4)} <= 0.042 threshold).`;
+          mseBar.className = "h-full bg-emerald-500 transition-all duration-300 rounded-full";
+          action.textContent = "Forward Packet (Allowed)";
+          action.className = "text-emerald-400 font-bold";
+        }
+
+        const pkt = r.packet;
+        if (pkt) {
+          document.getElementById('craft-detail-tuple').textContent = `${pkt.src_ip}:${pkt.src_port} → ${pkt.dst_ip}:${pkt.dst_port} (${pkt.protocol_name})`;
+          document.getElementById('craft-detail-flags').textContent = pkt.tcp_flags ? pkt.tcp_flags.join(', ') : 'NONE';
+          document.getElementById('craft-detail-hex').textContent = pkt.payload_hex || '-';
+        }
+      } catch (err) {
+        console.error("Packet craft error:", err);
+      }
+    }
+
+    // ==========================================
+    // TAB 8: TCP 3-WAY HANDSHAKE & STATE MACHINE
+    // ==========================================
+    const tcpState = {
+      step: 0,
+      autoPlayTimer: null,
+      steps: [
+        {
+          dot: 1,
+          left: '10%',
+          label: 'SYN',
+          seq: 'Seq=1000 Ack=0',
+          arrow: '➔',
+          bg: 'bg-amber-600',
+          clientState: 'SYN_SENT',
+          serverState: 'LISTEN',
+          expl: 'Step 1: Client initiates the connection by forging a TCP packet with the SYN flag set. It chooses Initial Sequence Number (ISN) = 1000 and transitions socket state to TCP_SYN_SENT.',
+          sec: 'In a SYN flood attack, an attacker fires millions of these SYN packets with spoofed source IPs and abandons them, exhausting the server\'s half-open connection table (backlog).'
+        },
+        {
+          dot: 2,
+          left: '78%',
+          label: 'SYN-ACK',
+          seq: 'Seq=5000 Ack=1001',
+          arrow: '⬅',
+          bg: 'bg-purple-600',
+          clientState: 'SYN_SENT',
+          serverState: 'SYN_RECV',
+          expl: 'Step 2: Server responds with SYN-ACK! It acknowledges the client sequence (Ack = 1000 + 1 = 1001) and picks its own ISN = 5000. Server socket enters TCP_SYN_RECV.',
+          sec: 'Linux defends against SYN floods using "SYN Cookies" (generating the ISN cryptographically from client IP and timestamp so no kernel memory is allocated until ACK arrives).'
+        },
+        {
+          dot: 3,
+          left: '10%',
+          label: 'ACK',
+          seq: 'Seq=1001 Ack=5001',
+          arrow: '➔',
+          bg: 'bg-emerald-600',
+          clientState: 'ESTABLISHED',
+          serverState: 'ESTABLISHED',
+          expl: 'Step 3: Client replies with final ACK (Seq=1001, Ack=5001). Both sockets transition to TCP_ESTABLISHED! Full-duplex byte stream is now open for application data.',
+          sec: 'GraphIDS checks the bidirectional flow ratio (In/Out packets and bytes). An established TCP connection will have balanced forward and backward packets.'
+        },
+        {
+          dot: 4,
+          left: '50%',
+          label: 'DATA (HTTP GET)',
+          seq: 'Seq=1001 Ack=5001 Len=512',
+          arrow: '➔',
+          bg: 'bg-blue-600',
+          clientState: 'ESTABLISHED',
+          serverState: 'ESTABLISHED',
+          expl: 'Step 4: Application Layer Data Transfer. Client sends HTTP GET /request, payload is encapsulated into TCP frames and acknowledged sequentially.',
+          sec: 'GraphIDS analyzes packet inter-arrival times (IAT) and flow sizes to detect data exfiltration and command-and-control beacons.'
+        },
+        {
+          dot: 5,
+          left: '80%',
+          label: 'FIN-ACK (Close)',
+          seq: 'Seq=1513 Ack=5001',
+          arrow: '➔',
+          bg: 'bg-rose-600',
+          clientState: 'TIME_WAIT',
+          serverState: 'CLOSED',
+          expl: 'Step 5: Connection Teardown. Client sends FIN to terminate transmission. Sockets gracefully step through FIN_WAIT_1 -> CLOSE_WAIT -> LAST_ACK -> TIME_WAIT -> CLOSED.',
+          sec: 'Abrupt RST packets without proper FIN negotiation can indicate port resets or firewall active intervention.'
+        }
+      ]
+    };
+
+    function updateTcpVisualizer() {
+      const stepIndex = tcpState.step;
+      const stepData = tcpState.steps[stepIndex];
+
+      // Update dots and lines
+      for (let i = 1; i <= 5; i++) {
+        const dot = document.getElementById(`step-dot-${i}`);
+        const line = document.getElementById(`step-line-${i}`);
+        if (i <= stepIndex + 1) {
+          dot.className = "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-blue-600 text-white border border-blue-400 shadow-md";
+        } else {
+          dot.className = "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700";
+        }
+        if (line) {
+          if (i <= stepIndex) line.className = "flex-1 h-1 bg-blue-500 mx-2";
+          else line.className = "flex-1 h-1 bg-slate-800 mx-2";
+        }
+      }
+
+      // Update socket states
+      const clientEl = document.getElementById('tcp-client-state');
+      const serverEl = document.getElementById('tcp-server-state');
+      if (clientEl) {
+        clientEl.textContent = stepData.clientState;
+        clientEl.className = `font-bold px-2 py-0.5 rounded ${stepData.clientState === 'ESTABLISHED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-300'}`;
+      }
+      if (serverEl) {
+        serverEl.textContent = stepData.serverState;
+        serverEl.className = `font-bold px-2 py-0.5 rounded ${stepData.serverState === 'ESTABLISHED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-300'}`;
+      }
+
+      // Update packet transit element
+      const transit = document.getElementById('tcp-packet-transit');
+      if (transit) {
+        transit.style.left = stepData.left;
+        transit.className = `absolute transition-all duration-700 ease-out flex items-center gap-2 px-3 py-1.5 rounded-lg text-white font-mono text-xs shadow-lg ${stepData.bg}`;
+        document.getElementById('tcp-packet-arrow').textContent = stepData.arrow;
+        document.getElementById('tcp-packet-label').textContent = stepData.label;
+        document.getElementById('tcp-packet-seq').textContent = stepData.seq;
+      }
+
+      // Update explanation boxes
+      const explEl = document.getElementById('tcp-explanation-text');
+      const secEl = document.getElementById('tcp-security-text');
+      if (explEl) explEl.textContent = stepData.expl;
+      if (secEl) secEl.textContent = stepData.sec;
+    }
+
+    function tcpHandshakeNext() {
+      tcpState.step = (tcpState.step + 1) % tcpState.steps.length;
+      updateTcpVisualizer();
+    }
+
+    function tcpHandshakeReset() {
+      if (tcpState.autoPlayTimer) {
+        clearInterval(tcpState.autoPlayTimer);
+        tcpState.autoPlayTimer = null;
+        document.getElementById('btn-tcp-autoplay').textContent = "▶ Auto-Play";
+      }
+      tcpState.step = 0;
+      updateTcpVisualizer();
+    }
+
+    function tcpAutoPlay() {
+      const btn = document.getElementById('btn-tcp-autoplay');
+      if (tcpState.autoPlayTimer) {
+        clearInterval(tcpState.autoPlayTimer);
+        tcpState.autoPlayTimer = null;
+        btn.textContent = "▶ Auto-Play";
+      } else {
+        btn.textContent = "⏸ Pause";
+        tcpState.autoPlayTimer = setInterval(() => {
+          tcpHandshakeNext();
+        }, 1600);
+      }
+    }
+
+    function tcpSimulateSynFlood() {
+      setScenario('syn_flood');
+      switchTab('network-tab');
+    }
+
+    // Start background telemetry loop (polling every 300ms)
+    setInterval(pollData, 300);
+  </script>
+</body>
+</html>
