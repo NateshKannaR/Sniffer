@@ -14,6 +14,7 @@ PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from prototype.blue_team_engine import BlueTeamEngine
 from prototype.flow_aggregator import FlowAggregator
 from prototype.geoip_resolver import GeoIpResolver
 from prototype.graph_engine import GraphEngine
@@ -26,9 +27,10 @@ from prototype.process_tracker import ProcessTracker
 
 class PrototypeState:
     def __init__(self):
-        self.data_source = "simulated"  # "simulated" or "live"
+        self.blue_team = BlueTeamEngine()
+        self.interface = self.blue_team.network_profile.get("interface", "wlo1")
+        self.data_source = "live"  # 100% Real Linux Network Telemetry by default!
         self.scenario = "normal"
-        self.interface = "wlo1"
         self.generator = TrafficGenerator()
         self.live_sniffer = LivePacketSniffer(interface=self.interface)
         self.aggregator = FlowAggregator(flow_timeout_sec=4.0)
@@ -43,6 +45,9 @@ class PrototypeState:
         self.latest_mean_mse = 0.0124
         self.web_requests = deque(maxlen=150)
         self.lock = threading.Lock()
+
+        # Start live physical Wi-Fi sniffer right away
+        self.live_sniffer.start()
         self.is_running = True
 
         # When a flow completes, register it into the graph engine
@@ -197,7 +202,7 @@ def background_worker():
             GLOBAL_STATE.step()
         except Exception as e:
             print(f"[Worker Error] {e}")
-        time.sleep(0.18)  # ~5-6 packets/sec for clear visual streaming
+        time.sleep(0.04)  # High-rate responsiveness for real Wi-Fi packet capture
 
 
 class PrototypeHandler(BaseHTTPRequestHandler):
@@ -211,6 +216,28 @@ class PrototypeHandler(BaseHTTPRequestHandler):
             self._serve_file(os.path.join(CURRENT_DIR, "static", "index.html"), "text/html")
         elif parsed.path == "/api/telemetry":
             self._serve_telemetry()
+        elif parsed.path == "/api/blue_team/posture":
+            with GLOBAL_STATE.lock:
+                report = GLOBAL_STATE.blue_team.get_full_posture_report(
+                    blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
+                    recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                )
+            self._send_json(report)
+        elif parsed.path == "/api/blue_team/incidents":
+            with GLOBAL_STATE.lock:
+                report = GLOBAL_STATE.blue_team.get_full_posture_report(
+                    blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
+                    recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                )
+            self._send_json({"incidents": report["incidents"], "posture": report["posture"]})
+        elif parsed.path == "/api/blue_team/reaudit":
+            with GLOBAL_STATE.lock:
+                GLOBAL_STATE.blue_team.reaudit()
+                report = GLOBAL_STATE.blue_team.get_full_posture_report(
+                    blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
+                    recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                )
+            self._send_json(report)
         elif parsed.path == "/api/lan":
             devices = GLOBAL_STATE.lan_scanner.scan_lan()
             self._send_json({"devices": devices})
@@ -226,7 +253,39 @@ class PrototypeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        if parsed.path == "/api/scenario":
+        if parsed.path == "/api/blue_team/acknowledge":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length).decode("utf-8")
+            try:
+                data = json.loads(body)
+                inc_id = data.get("id")
+                if inc_id:
+                    GLOBAL_STATE.blue_team.acknowledge_incident(inc_id)
+                self._send_json({"status": "ok", "acknowledged": inc_id})
+            except Exception as e:
+                self.send_error(400, str(e))
+        elif parsed.path == "/api/blue_team/action":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length).decode("utf-8")
+            try:
+                data = json.loads(body)
+                action = data.get("action")
+                target = data.get("target")
+                if action == "block_ip" and target:
+                    with GLOBAL_STATE.lock:
+                        GLOBAL_STATE.inference_runner.trigger_manual_block(target, "Blue Team Manual Quarantine")
+                elif action == "isolate_port" and target:
+                    GLOBAL_STATE.blue_team.active_countermeasures.append({
+                        "rule": f"ufw deny {target}",
+                        "description": f"Isolate port {target} from external interface",
+                        "timestamp": time.time(),
+                    })
+                elif action == "acknowledge" and target:
+                    GLOBAL_STATE.blue_team.acknowledge_incident(target)
+                self._send_json({"status": "ok", "action": action, "target": target})
+            except Exception as e:
+                self.send_error(400, str(e))
+        elif parsed.path == "/api/scenario":
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length).decode("utf-8")
             try:
@@ -353,6 +412,14 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                 "data_source": GLOBAL_STATE.data_source,
                 "interface": GLOBAL_STATE.interface,
                 "web_requests": list(GLOBAL_STATE.web_requests),
+                "blue_team": {
+                    "network_profile": GLOBAL_STATE.blue_team.network_profile,
+                    "posture_score": GLOBAL_STATE.blue_team.compute_posture_score(
+                        attack_surface=GLOBAL_STATE.blue_team.auditor.audit_listening_ports(),
+                        gateway_integrity=GLOBAL_STATE.blue_team.gateway_watchdog.check_integrity(),
+                        anomalies_count=len([r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")]),
+                    ),
+                },
             }
         self._send_json(data)
 

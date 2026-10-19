@@ -68,7 +68,9 @@ class LanScanner:
                         continue
 
                     vendor = self.get_oui_vendor(mac)
-                    is_gateway = ip.endswith(".1") or ip.endswith(".67") or "Router" in vendor
+                    from prototype.blue_team_engine import DynamicNetworkDetector
+                    net_profile = DynamicNetworkDetector.detect_network_profile()
+                    is_gateway = ip == net_profile.get("gateway_ip") or ip.endswith(".1") or "Router" in vendor
 
                     # Check for ARP Spoofing (duplicate MAC for multiple distinct IPs)
                     arp_spoof_risk = False
@@ -90,11 +92,13 @@ class LanScanner:
         except Exception as e:
             print(f"[LanScanner Error] {e}")
 
-        # Always include local loopback / gateway baseline if table empty
+        # Always include dynamically discovered gateway baseline if table empty
         if not devices:
+            from prototype.blue_team_engine import DynamicNetworkDetector
+            net_profile = DynamicNetworkDetector.detect_network_profile()
             devices.append({
-                "ip": "10.138.114.67",
-                "mac": "ce:a3:10:8c:b2:56",
+                "ip": net_profile.get("gateway_ip", "10.0.0.1"),
+                "mac": net_profile.get("gateway_mac", "1e:75:a6:60:07:aa"),
                 "vendor": "Wi-Fi Router / Gateway",
                 "interface": self.interface,
                 "is_gateway": True,

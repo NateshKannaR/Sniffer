@@ -30,12 +30,15 @@ class InferenceRunner:
         self.device = device
         self.blocked_ips: dict[str, dict[str, Any]] = {}
         self.ips_events: list[dict[str, Any]] = []
+        from prototype.blue_team_engine import DynamicNetworkDetector
+        net_profile = DynamicNetworkDetector.detect_network_profile()
         self.protected_whitelist = {
-            "10.138.114.94",  # Local Host Machine (wlo1)
-            "10.138.114.67",  # Local Gateway Router
+            net_profile.get("host_ip", "127.0.0.1"),
+            net_profile.get("gateway_ip", "127.0.0.1"),
             "127.0.0.1",
             "::1",
             "localhost",
+            "0.0.0.0",
         }
 
         if HAS_TORCH:
@@ -164,6 +167,9 @@ class InferenceRunner:
         self.ips_events.insert(0, event)
         if len(self.ips_events) > 100:
             self.ips_events.pop()
+
+    def trigger_manual_block(self, ip: str, reason: str = "Manual Block"):
+        self._trigger_ips_mitigation(ip, 0.088, reason)
 
     def unblock_ip(self, ip: str):
         if ip in self.blocked_ips:

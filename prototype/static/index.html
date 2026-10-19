@@ -1,156 +1,351 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <title>GraphIDS: Linux ML Network Intrusion Detection & Prevention</title>
+  <title>Robo Blue Hat: Autonomous Linux Cyber Defense & SOC Platform</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
-    /* Custom scrollbars */
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #080c15;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(30, 41, 59, 0.35) 0%, rgba(8, 12, 21, 1) 70%),
+        radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 90% 20%, rgba(99, 102, 241, 0.03) 0%, transparent 40%);
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
     ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .animate-pulse-slow { animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    ::-webkit-scrollbar-track { background: #080c15; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    
+    .glass-panel {
+      background: rgba(13, 19, 33, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+    }
+    .glass-card-subtle {
+      background: rgba(18, 26, 44, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 20px -3px rgba(56, 189, 248, 0.2);
+    }
+    .glow-amber {
+      box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.2);
+    }
+    .glow-rose {
+      box-shadow: 0 0 20px -3px rgba(244, 63, 94, 0.2);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.2);
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+<body class="bg-[#080c15] text-slate-100 antialiased min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
 
-  <!-- TOP NAV BAR -->
-  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
-        G
+  <!-- TOP HEADER (Single Tier, Clean, Enterprise Grade) -->
+  <header class="bg-[#0b101c]/90 backdrop-blur-md border-b border-white/[0.06] px-5 py-3 sticky top-0 z-50 flex items-center justify-between gap-4">
+    <!-- Brand & Host Indicator -->
+    <div class="flex items-center gap-3.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="font-bold text-base tracking-tight text-white">GraphIDS Live</h1>
-          <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Linux IPS Active</span>
-          <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">E-GraphSAGE + Transformer</span>
+          <span class="font-extrabold text-base tracking-tight text-white">ROBO BLUE HAT</span>
+          <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase tracking-wider">Autonomous SOC</span>
+          <span id="top-host-chip" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-mono text-slate-300 bg-slate-800/80 rounded-full border border-slate-700/60">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            10.22.147.94 (wlo1)
+          </span>
         </div>
-        <p class="text-xs text-slate-400">Real-Time Packet Ingestion, NetFlow Graphing, and Self-Supervised AI Intrusion Detection</p>
       </div>
     </div>
 
-    <!-- Live Controls & Scenario Deck -->
-    <div class="flex flex-wrap items-center gap-2">
-      <!-- Traffic Source Mode Selector -->
-      <div class="flex items-center bg-slate-800/90 p-1 rounded-lg border border-slate-700">
-        <span class="text-[11px] font-semibold uppercase text-slate-400 px-2">Data Source:</span>
-        <button onclick="setSource('simulated')" id="btn-src-sim" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-blue-600 text-white shadow-sm flex items-center gap-1">
-          ⚡ Lab Attacks
+    <!-- Right Controls: Segmented Data Source & Action -->
+    <div class="flex items-center gap-3">
+      <!-- Segmented Source Toggle -->
+      <div class="flex items-center bg-[#101726] p-1 rounded-xl border border-white/[0.08] shadow-inner">
+        <button onclick="setSource('live')" id="btn-src-live" class="px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-cyan-500 text-slate-950 shadow-sm flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span>
+          Physical Wi-Fi (wlo1)
         </button>
-        <button onclick="setSource('live')" id="btn-src-live" class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700 flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          🌐 Real Wi-Fi (wlo1)
-        </button>
-      </div>
-
-      <!-- Scenario Selector -->
-      <div id="scenario-box" class="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700/80 transition-opacity">
-        <span class="text-[11px] font-semibold uppercase text-slate-400 px-2">Attack:</span>
-        <button onclick="setScenario('normal')" id="btn-normal" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all bg-emerald-600 text-white shadow-sm">
-          Normal
-        </button>
-        <button onclick="setScenario('syn_scan')" id="btn-syn_scan" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700">
-          SYN Scan
-        </button>
-        <button onclick="setScenario('syn_flood')" id="btn-syn_flood" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700">
-          DDoS Flood
-        </button>
-        <button onclick="setScenario('dns_tunnel')" id="btn-dns_tunnel" class="px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700">
-          DNS Exfil
+        <button onclick="setSource('simulated')" id="btn-src-sim" class="px-3 py-1 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1">
+          Lab Attack Scenarios
         </button>
       </div>
 
-      <!-- Play / Pause -->
-      <button onclick="toggleStream()" id="btn-stream" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-all shadow-sm">
+      <!-- Live Stream Status Badge -->
+      <button onclick="toggleStream()" id="btn-stream" class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-white/[0.08] flex items-center gap-2 transition-all shadow-sm">
         <span id="stream-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span id="stream-text">Streaming (Live)</span>
+        <span id="stream-text" class="hidden md:inline">Live Ingestion</span>
       </button>
 
-
-      <!-- Clear Data -->
-      <button onclick="clearData()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
-        Reset
+      <!-- Re-Audit Host Button -->
+      <button onclick="reauditHost()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-md shadow-cyan-500/15 flex items-center gap-1.5 transition-all">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        Re-Audit
       </button>
     </div>
   </header>
 
-  <!-- METRIC STATS TICKER -->
-  <div class="bg-slate-900 border-b border-slate-800/80 px-4 py-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs">
-    <div class="flex flex-col">
-      <span class="text-slate-400 text-[10px] uppercase font-semibold">Packets Ingested</span>
-      <span id="stat-total-pkts" class="font-mono text-sm font-bold text-white">0</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-slate-400 text-[10px] uppercase font-semibold">NetFlow Sessions</span>
-      <span id="stat-total-flows" class="font-mono text-sm font-bold text-blue-400">0</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-slate-400 text-[10px] uppercase font-semibold">Active Graph Nodes</span>
-      <span id="stat-graph-nodes" class="font-mono text-sm font-bold text-indigo-400">0 IPs</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-slate-400 text-[10px] uppercase font-semibold">GraphIDS MSE (Avg)</span>
-      <span id="stat-mean-mse" class="font-mono text-sm font-bold text-emerald-400">0.0120</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-slate-400 text-[10px] uppercase font-semibold">Operating Threshold</span>
-      <span class="font-mono text-sm font-bold text-amber-400">0.0420</span>
-    </div>
-    <div class="flex flex-col">
-      <span class="text-slate-400 text-[10px] uppercase font-semibold">Linux Firewall (IPS)</span>
-      <span id="stat-blocked-count" class="font-mono text-sm font-bold text-rose-400">0 Blocked</span>
-    </div>
-  </div>
-
-  <!-- NAVIGATION TABS -->
-  <nav class="bg-slate-900/50 border-b border-slate-800 px-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold">
-    <button onclick="switchTab('network-tab')" id="nav-network-tab" class="py-2.5 border-b-2 border-blue-500 text-blue-400 flex items-center gap-1.5">
+  <!-- NAVIGATION TABS (No clumsy numbering, modern clean tab bar) -->
+  <nav class="bg-[#0b101c]/60 backdrop-blur border-b border-white/[0.05] px-5 flex items-center gap-1 overflow-x-auto text-xs font-medium">
+    <button onclick="switchTab('blue-team-tab')" id="nav-blue-team-tab" class="py-2.5 px-3 border-b-2 border-cyan-400 text-cyan-300 flex items-center gap-2 whitespace-nowrap transition-all font-semibold">
+      <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+      SOC Overview
+    </button>
+    <button onclick="switchTab('network-tab')" id="nav-network-tab" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-      1. Network & Process Tab
+      Live Packets
     </button>
-    <button onclick="switchTab('web-tab')" id="nav-web-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('web-tab')" id="nav-web-tab" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-      2. 🌐 Web & App Requests (DPI)
+      Web & App DPI
     </button>
-    <button onclick="switchTab('flow-tab')" id="nav-flow-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('flow-tab')" id="nav-flow-tab" class="py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-      3. NetFlow Aggregator
+      NetFlow Sessions
     </button>
-    <button onclick="switchTab('graph-tab')" id="nav-graph-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('graph-tab')" id="nav-graph-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all px-3">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-      4. Topology & GeoIP
+      Network Topology
     </button>
-    <button onclick="switchTab('graphids-tab')" id="nav-graphids-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('graphids-tab')" id="nav-graphids-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all px-3">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-      5. GraphIDS AI Engine
+      GraphIDS AI
     </button>
-    <button onclick="switchTab('ips-tab')" id="nav-ips-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('ips-tab')" id="nav-ips-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all px-3">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-      6. Linux Defense (IPS)
+      Linux Firewall (IPS)
     </button>
-    <button onclick="switchTab('lan-tab')" id="nav-lan-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('lan-tab')" id="nav-lan-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all px-3">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
-      7. LAN & ARP Scanner
+      LAN Radar
     </button>
-    <button onclick="switchTab('crafter-tab')" id="nav-crafter-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('crafter-tab')" id="nav-crafter-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all px-3">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-      8. Packet Crafter Lab
+      Packet Crafter
     </button>
-    <button onclick="switchTab('tcp-tab')" id="nav-tcp-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+    <button onclick="switchTab('tcp-tab')" id="nav-tcp-tab" class="py-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all px-3">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-      9. TCP Handshake Visualizer
+      TCP Handshake
     </button>
   </nav>
 
-
   <!-- MAIN VIEWPORT -->
-  <main class="flex-1 p-4 max-w-7xl w-full mx-auto space-y-4">
+  <main class="flex-1 p-5 max-w-7xl w-full mx-auto space-y-5">
+
+    <!-- TAB 0: ROBO BLUE HAT TEAM (Primary SOC Operations Center) -->
+    <div id="view-blue-team-tab" class="space-y-5">
+      
+      <!-- Top Defense Shield Hero Banner -->
+      <div id="defense-hero-banner" class="glass-panel rounded-2xl p-6 relative overflow-hidden transition-all duration-300">
+        <div class="relative z-10 flex flex-wrap items-center justify-between gap-6">
+          <div class="flex items-center gap-4">
+            <div id="shield-icon-box" class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 glow-amber transition-all">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <span id="shield-status-pill" class="px-3 py-1 text-xs font-bold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 tracking-wide uppercase flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  DEFENSE SHIELD: ATTACK SURFACE DETECTED
+                </span>
+                <span class="text-xs font-medium text-slate-400">Autonomous Host Defense Active</span>
+              </div>
+              <h2 id="shield-headline" class="text-lg font-bold text-white tracking-tight mt-1">Host Exposure Warning: Port 22 SSH Exposed on Local Subnet</h2>
+              <p id="shield-subtext" class="text-xs text-slate-400 mt-0.5 max-w-3xl leading-relaxed">The Robo Blue Hat agent is actively inspecting Linux sockets, monitoring physical Wi-Fi packets, and defending against ARP MITM poisoning.</p>
+            </div>
+          </div>
+
+          <!-- Network Profile Tags -->
+          <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <div class="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/[0.08] text-slate-300">
+              <span class="text-slate-500 mr-1.5 font-sans uppercase text-[10px] font-bold">Host</span>
+              <span id="hero-host-ip">10.22.147.94</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/[0.08] text-slate-300">
+              <span class="text-slate-500 mr-1.5 font-sans uppercase text-[10px] font-bold">Gateway</span>
+              <span id="hero-gw-ip">10.22.147.23</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/[0.08] text-slate-300">
+              <span class="text-slate-500 mr-1.5 font-sans uppercase text-[10px] font-bold">Interface</span>
+              <span id="hero-iface">wlo1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Executive 4-Card KPI Deck -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- KPI 1: Host Security Posture Score (With SVG Donut Ring) -->
+        <div class="glass-panel rounded-2xl p-5 flex items-center gap-4 transition-all hover:border-white/[0.12]">
+          <div class="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-20 h-20 -rotate-90 transform" viewBox="0 0 36 36">
+              <path class="text-slate-800/80" stroke-width="3.2" stroke="currentColor" fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="posture-svg-ring" class="text-amber-500 transition-all duration-700 ease-out" stroke-dasharray="72, 100" stroke-width="3.2" stroke-linecap="round" stroke="currentColor" fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="absolute flex flex-col items-center justify-center">
+              <span id="posture-score-val" class="font-mono text-xl font-black text-white tracking-tight">72</span>
+              <span id="posture-grade-val" class="text-[9px] font-extrabold text-amber-400 tracking-wider">GRADE B</span>
+            </div>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Security Posture</span>
+            <div id="posture-verdict-text" class="text-sm font-bold text-white mt-0.5 leading-snug">Fair Posture</div>
+            <p id="posture-ports-count" class="text-xs text-slate-400 mt-1">25 Active Sockets</p>
+          </div>
+        </div>
+
+        <!-- KPI 2: WAN Attack Surface -->
+        <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-white/[0.12]">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">WAN Attack Surface</span>
+            <span id="kpi-critical-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/25">1 CRITICAL</span>
+          </div>
+          <div>
+            <div id="kpi-surface-title" class="text-base font-bold text-white mt-2 truncate">sshd (0.0.0.0:22)</div>
+            <p class="text-xs text-slate-400 mt-0.5">Bound to all network interfaces</p>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div id="surface-progress-bar" class="bg-rose-500 h-full rounded-full transition-all" style="width: 25%"></div>
+          </div>
+        </div>
+
+        <!-- KPI 3: Gateway & ARP Integrity -->
+        <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-white/[0.12]">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gateway & ARP Radar</span>
+            <span id="kpi-mitm-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">SECURE</span>
+          </div>
+          <div>
+            <div id="kpi-gw-ip" class="text-base font-bold text-white mt-2">10.22.147.23</div>
+            <p id="kpi-gw-mac" class="text-xs font-mono text-slate-400 mt-0.5 truncate">MAC: 1e:75:a6:60:07:aa</p>
+          </div>
+          <p class="text-[11px] text-emerald-400/90 mt-2 font-medium">✓ ARP Table Authentic & Verified</p>
+        </div>
+
+        <!-- KPI 4: Autonomous Defense & Firewall Countermeasures -->
+        <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-white/[0.12]">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kernel Firewall (IPS)</span>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/25">ARMED</span>
+          </div>
+          <div>
+            <div id="kpi-countermeasures-count" class="text-base font-bold text-white mt-2">0 Attacker Blocks</div>
+            <p class="text-xs text-slate-400 mt-0.5">GNN Anomaly Engine Running</p>
+          </div>
+          <p class="text-[11px] text-cyan-400/90 mt-2 font-medium">● Real-time Drop Rules Ready</p>
+        </div>
+
+      </div>
+
+      <!-- Main Workspace: Split Two-Column (Triage Feed & Attack Surface) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Left: Autonomous Threat Triage & Incident Feed (7 cols) -->
+        <div class="lg:col-span-7 glass-panel rounded-2xl p-5 flex flex-col shadow-sm">
+          <div class="flex items-center justify-between pb-3.5 border-b border-white/[0.06] mb-4">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <h3 class="font-bold text-sm text-white tracking-tight">Autonomous Threat Triage & Incident Stream</h3>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">Plain-English Cyber Defense</span>
+          </div>
+          
+          <div id="incidents-feed-container" class="space-y-3.5 max-h-[460px] overflow-y-auto pr-1">
+            <div class="p-8 text-center text-slate-400">Loading live security triage...</div>
+          </div>
+        </div>
+
+        <!-- Right: Host Attack Surface & Listening Sockets (5 cols) -->
+        <div class="lg:col-span-5 glass-panel rounded-2xl p-5 flex flex-col shadow-sm">
+          <div class="flex flex-wrap items-center justify-between pb-3.5 border-b border-white/[0.06] mb-3.5 gap-2">
+            <div>
+              <h3 class="font-bold text-sm text-white tracking-tight">Host Attack Surface Inspector</h3>
+              <p class="text-[11px] text-slate-400">Live sockets from Linux kernel</p>
+            </div>
+            <span id="attack-surface-badge" class="px-2.5 py-0.5 text-xs font-mono font-bold rounded-md bg-slate-800 text-slate-300 border border-white/[0.08]">25 Listeners</span>
+          </div>
+
+          <!-- Socket Filters & Search -->
+          <div class="flex items-center gap-2 mb-3">
+            <div class="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-white/[0.06] text-[11px] font-medium">
+              <button onclick="filterSockets('all')" id="filter-btn-all" class="px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-300 font-semibold">All</button>
+              <button onclick="filterSockets('wan')" id="filter-btn-wan" class="px-2 py-1 rounded-md text-slate-400 hover:text-slate-200">WAN Exposed</button>
+              <button onclick="filterSockets('local')" id="filter-btn-local" class="px-2 py-1 rounded-md text-slate-400 hover:text-slate-200">Local Only</button>
+            </div>
+            <input type="text" id="socket-search" oninput="applySocketSearch()" placeholder="Search port or daemon..." class="flex-1 px-2.5 py-1 text-xs rounded-lg bg-slate-900/80 border border-white/[0.08] text-slate-200 focus:outline-none focus:border-cyan-500 font-sans">
+          </div>
+
+          <!-- Socket Table -->
+          <div class="overflow-x-auto max-h-[380px] overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 bg-[#0c1220] border-b border-white/[0.06] text-slate-400 font-semibold text-[10px] uppercase tracking-wider">
+                <tr>
+                  <th class="py-2 px-2.5">Port</th>
+                  <th class="py-2 px-2.5">Daemon</th>
+                  <th class="py-2 px-2.5">Binding</th>
+                  <th class="py-2 px-2.5">Security Level</th>
+                </tr>
+              </thead>
+              <tbody id="attack-surface-table-body" class="divide-y divide-white/[0.04] font-mono text-[11px]">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom: Live Physical Wi-Fi Telemetry Stream (Mini-Sniffer inside SOC) -->
+      <div class="glass-panel rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h3 class="font-bold text-sm text-white tracking-tight">Live Physical Wi-Fi Packet Radar</h3>
+            <span class="text-xs text-slate-400 font-mono">(wlo1 physical interface)</span>
+          </div>
+          <button onclick="switchTab('network-tab')" class="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors">
+            Open Full Packet Inspector →
+          </button>
+        </div>
+        <div class="overflow-x-auto max-h-[220px] overflow-y-auto">
+          <table class="w-full text-left font-mono text-[11px]">
+            <thead class="sticky top-0 bg-[#0c1220] border-b border-white/[0.06] text-slate-400 text-[10px] uppercase tracking-wider font-semibold">
+              <tr>
+                <th class="py-1.5 px-2.5 w-12">#</th>
+                <th class="py-1.5 px-2.5 w-28">Process</th>
+                <th class="py-1.5 px-2.5">Source IP</th>
+                <th class="py-1.5 px-2.5">Destination IP / ASN</th>
+                <th class="py-1.5 px-2.5 w-24">Protocol</th>
+                <th class="py-1.5 px-2.5">Details</th>
+              </tr>
+            </thead>
+            <tbody id="soc-live-packets-body" class="divide-y divide-white/[0.04]">
+              <!-- Populated live -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
 
     <!-- TAB 1: NETWORK TAB (Packets & Deep OSI Inspector) -->
-    <div id="view-network-tab" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div id="view-network-tab" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4">
       <!-- Packet Stream Table -->
       <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col shadow-sm">
         <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
@@ -881,7 +1076,7 @@
   <script>
     let isStreaming = true;
     let currentScenario = 'normal';
-    let currentTab = 'network-tab';
+    let currentTab = 'blue-team-tab';
 
     // State storage
     const state = {
@@ -895,26 +1090,406 @@
       totalPackets: 0,
       totalFlows: 0,
       meanMse: 0.0124,
-      webRequests: []
+      webRequests: [],
+      blueTeam: null
     };
+
+    let blueTeamReport = null;
+    let currentSocketFilter = 'all';
+    let socketSearchQuery = '';
+
+    async function loadBlueTeamReport() {
+      try {
+        const res = await fetch('/api/blue_team/posture');
+        if (!res.ok) return;
+        blueTeamReport = await res.json();
+        renderBlueTeamSOC(blueTeamReport);
+      } catch (err) {
+        console.error("Failed to load Blue Team posture:", err);
+      }
+    }
+
+    async function reauditHost() {
+      const btns = document.querySelectorAll('#btn-reaudit-host, [onclick="reauditHost()"]');
+      btns.forEach(b => {
+        b.classList.add('animate-pulse');
+        b.disabled = true;
+      });
+      try {
+        const res = await fetch('/api/blue_team/reaudit');
+        if (res.ok) {
+          blueTeamReport = await res.json();
+          renderBlueTeamSOC(blueTeamReport);
+        }
+      } catch (err) {
+        console.error("Re-audit error:", err);
+      } finally {
+        btns.forEach(b => {
+          b.classList.remove('animate-pulse');
+          b.disabled = false;
+        });
+      }
+    }
+
+    async function acknowledgeIncident(incId) {
+      try {
+        await fetch('/api/blue_team/acknowledge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: incId })
+        });
+        loadBlueTeamReport();
+      } catch (err) {
+        console.error("Acknowledge error:", err);
+      }
+    }
+
+    async function executeBlueTeamAction(action, target) {
+      try {
+        await fetch('/api/blue_team/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: action, target: target })
+        });
+        loadBlueTeamReport();
+      } catch (err) {
+        console.error("Action execution error:", err);
+      }
+    }
+
+    function filterSockets(type) {
+      currentSocketFilter = type;
+      ['all', 'wan', 'local'].forEach(t => {
+        const btn = document.getElementById(`filter-btn-${t}`);
+        if (!btn) return;
+        if (t === type) {
+          btn.className = "px-2.5 py-1 rounded-md bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 shadow-sm";
+        } else {
+          btn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-colors";
+        }
+      });
+      renderAttackSurfaceTable();
+    }
+
+    function applySocketSearch() {
+      const input = document.getElementById('socket-search');
+      socketSearchQuery = input ? (input.value || '').toLowerCase().trim() : '';
+      renderAttackSurfaceTable();
+    }
+
+    function renderAttackSurfaceTable() {
+      if (!blueTeamReport || !blueTeamReport.attack_surface) return;
+      const surface = blueTeamReport.attack_surface;
+      const surfaceBody = document.getElementById('attack-surface-table-body');
+      const surfaceBadge = document.getElementById('attack-surface-badge');
+      if (!surfaceBody) return;
+
+      const filtered = surface.filter(s => {
+        if (currentSocketFilter === 'wan') {
+          if (s.exposure !== 'CRITICAL' && s.exposure !== 'HIGH' && s.exposure !== 'WARNING') return false;
+        } else if (currentSocketFilter === 'local') {
+          if (s.exposure !== 'SAFE') return false;
+        }
+        if (socketSearchQuery) {
+          const matchPort = String(s.port).includes(socketSearchQuery);
+          const matchProc = (s.process || '').toLowerCase().includes(socketSearchQuery);
+          const matchAddr = (s.address || '').toLowerCase().includes(socketSearchQuery);
+          const matchProto = (s.proto || '').toLowerCase().includes(socketSearchQuery);
+          if (!matchPort && !matchProc && !matchAddr && !matchProto) return false;
+        }
+        return true;
+      });
+
+      if (surfaceBadge) {
+        surfaceBadge.textContent = `${filtered.length} of ${surface.length} Listeners`;
+      }
+
+      if (filtered.length === 0) {
+        surfaceBody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-slate-500 font-sans text-xs">No sockets match filter "${currentSocketFilter}".</td></tr>`;
+        return;
+      }
+
+      surfaceBody.innerHTML = filtered.map(s => {
+        const expBadge = s.exposure === 'CRITICAL' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' :
+                         (s.exposure === 'HIGH' ? 'bg-orange-500/15 text-orange-400 border border-orange-500/30' :
+                         (s.exposure === 'WARNING' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                         (s.exposure === 'SAFE' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700')));
+        return `
+          <tr class="hover:bg-white/[0.04] transition-colors">
+            <td class="py-2.5 px-2.5 font-bold text-white whitespace-nowrap">
+              ${s.proto} <span class="text-cyan-400">${s.port}</span>
+            </td>
+            <td class="py-2.5 px-2.5">
+              <div class="font-bold text-white text-[11px] truncate max-w-[120px]">${s.process}</div>
+              <div class="text-[10px] text-slate-400 font-mono">PID ${s.pid || '-'}</div>
+            </td>
+            <td class="py-2.5 px-2.5 text-slate-300 font-mono text-[11px]">
+              <div>${s.address}</div>
+              <div class="text-[9px] text-slate-400 font-sans">${s.is_localhost ? 'Loopback' : 'All Interfaces'}</div>
+            </td>
+            <td class="py-2.5 px-2.5">
+              <span class="px-2 py-0.5 text-[9px] font-bold rounded-md uppercase border ${expBadge}">${s.exposure}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSocLivePackets() {
+      const tbody = document.getElementById('soc-live-packets-body');
+      if (!tbody) return;
+      if (!state.packets || state.packets.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500 font-sans text-xs">Awaiting physical Wi-Fi packets on wlo1...</td></tr>`;
+        return;
+      }
+      const slice = state.packets.slice(0, 10);
+      tbody.innerHTML = slice.map((p, idx) => {
+        const procName = p.process && p.process.name ? p.process.name : 'kernel';
+        const procPid = p.process && p.process.pid ? ` (${p.process.pid})` : '';
+        const dstGeo = p.geoip ? (p.geoip.org || p.geoip.country || '') : '';
+        const dstInfo = dstGeo ? `<span class="text-[10px] text-cyan-400 ml-1.5 font-sans">${dstGeo}</span>` : '';
+        const protoColor = p.protocol_name === 'TCP' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20' :
+                           (p.protocol_name === 'UDP' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                           (p.protocol_name === 'DNS' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20'));
+        return `
+          <tr class="hover:bg-white/[0.03] transition-colors">
+            <td class="py-2 px-2.5 text-slate-500">${p.id || (idx + 1)}</td>
+            <td class="py-2 px-2.5 font-bold text-white truncate max-w-[130px]">${procName}<span class="text-slate-400 font-normal text-[10px]">${procPid}</span></td>
+            <td class="py-2 px-2.5 text-slate-300 font-mono text-[11px]">${p.src_ip}:${p.src_port || ''}</td>
+            <td class="py-2 px-2.5 text-slate-300 font-mono text-[11px]">${p.dst_ip}:${p.dst_port || ''} ${dstInfo}</td>
+            <td class="py-2 px-2.5"><span class="px-2 py-0.5 text-[10px] font-bold rounded border ${protoColor}">${p.protocol_name}</span></td>
+            <td class="py-2 px-2.5 text-slate-400 truncate max-w-[220px] font-sans text-[11px]">${p.summary || p.flags || 'Normal Frame'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderBlueTeamSOC(data) {
+      if (!data) return;
+      const p = data.posture || {};
+      const prof = data.network_profile || {};
+      const gw = data.gateway_integrity || {};
+      const incidents = data.incidents || [];
+      const surface = data.attack_surface || [];
+
+      // 1. Hero Host Profile Tags
+      const hostIpEl = document.getElementById('hero-host-ip');
+      const gwIpEl = document.getElementById('hero-gw-ip');
+      const ifaceEl = document.getElementById('hero-iface');
+      const topChip = document.getElementById('top-host-chip');
+
+      if (hostIpEl) hostIpEl.textContent = prof.host_ip || '127.0.0.1';
+      if (gwIpEl) gwIpEl.textContent = prof.gateway_ip || '127.0.0.1';
+      if (ifaceEl) ifaceEl.textContent = prof.interface || 'wlo1';
+      if (topChip) {
+        topChip.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ${prof.host_ip || '127.0.0.1'} (${prof.interface || 'wlo1'})`;
+      }
+
+      // 2. Defense Shield Hero Banner
+      const shieldPill = document.getElementById('shield-status-pill');
+      const shieldIconBox = document.getElementById('shield-icon-box');
+      const headline = document.getElementById('shield-headline');
+      const subtext = document.getElementById('shield-subtext');
+
+      const isCritical = p.grade === 'D' || p.grade === 'CRITICAL' || gw.is_mitm_detected;
+      const isWarning = p.grade === 'B' || p.grade === 'C' || (p.counts && p.counts.critical_exposed > 0);
+      const firstCrit = surface.find(s => s.exposure === 'CRITICAL');
+
+      if (shieldPill && shieldIconBox) {
+        if (isCritical) {
+          shieldPill.className = "px-3 py-1 text-xs font-bold rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 tracking-wide uppercase flex items-center gap-2";
+          shieldPill.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span> DEFENSE SHIELD: THREAT DETECTED`;
+          shieldIconBox.className = "w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 glow-rose transition-all";
+          if (headline) headline.textContent = gw.is_mitm_detected ? "MITM Alert: ARP Gateway Poisoning Detected on Local Subnet!" : (firstCrit ? `Host Exposure Warning: Port ${firstCrit.port} (${firstCrit.process}) Exposed to External WAN` : "Host Defense Alert: High Severity Vulnerability");
+          if (subtext) subtext.textContent = "The Robo Blue Hat agent identified active exposure or network spoofing. Review the plain-English triage below to take immediate countermeasure action.";
+        } else if (isWarning) {
+          shieldPill.className = "px-3 py-1 text-xs font-bold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 tracking-wide uppercase flex items-center gap-2";
+          shieldPill.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> DEFENSE SHIELD: ATTACK SURFACE DETECTED`;
+          shieldIconBox.className = "w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 glow-amber transition-all";
+          if (headline) headline.textContent = firstCrit ? `Host Exposure Warning: Port ${firstCrit.port} (${firstCrit.process}) Listening on All Interfaces` : "Host Attack Surface Warning: Unprotected Listening Sockets";
+          if (subtext) subtext.textContent = "Your Linux computer is actively running services bound to 0.0.0.0. Sockets can be contacted by devices on your local Wi-Fi network.";
+        } else {
+          shieldPill.className = "px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 tracking-wide uppercase flex items-center gap-2";
+          shieldPill.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> DEFENSE SHIELD ACTIVE & SECURE`;
+          shieldIconBox.className = "w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 glow-cyan transition-all";
+          if (headline) headline.textContent = "Autonomous Host Shield Active: Sockets Hardened & ARP Verified";
+          if (subtext) subtext.textContent = "All network daemons on this machine are bound to secure loopback (127.0.0.1) or protected by host firewall policies. Live packet telemetry is streaming.";
+        }
+      }
+
+      // 3. Posture Score & SVG Donut Ring
+      const scoreVal = document.getElementById('posture-score-val');
+      const gradeVal = document.getElementById('posture-grade-val');
+      const verdictVal = document.getElementById('posture-verdict-text');
+      const portsCount = document.getElementById('posture-ports-count');
+      const postureRing = document.getElementById('posture-svg-ring');
+
+      const scoreNum = Math.max(0, Math.min(100, p.score !== undefined ? p.score : 100));
+      if (scoreVal) scoreVal.textContent = scoreNum;
+      if (gradeVal) {
+        gradeVal.textContent = `GRADE ${p.grade || 'A+'}`;
+        const color = p.badge_color === 'rose' ? 'text-rose-400' : (p.badge_color === 'amber' ? 'text-amber-400' : 'text-emerald-400');
+        gradeVal.className = `text-[9px] font-extrabold tracking-wider ${color}`;
+      }
+      if (verdictVal) verdictVal.textContent = p.verdict || "Healthy Posture";
+      if (portsCount && p.counts) {
+        portsCount.textContent = `${p.counts.total_listening} Listening Sockets (${p.counts.safe_localhost} Protected Localhost)`;
+      }
+
+      if (postureRing) {
+        postureRing.setAttribute('stroke-dasharray', `${scoreNum}, 100`);
+        if (scoreNum >= 85) {
+          postureRing.className.baseVal = "text-emerald-400 transition-all duration-700 ease-out";
+        } else if (scoreNum >= 65) {
+          postureRing.className.baseVal = "text-amber-400 transition-all duration-700 ease-out";
+        } else {
+          postureRing.className.baseVal = "text-rose-500 transition-all duration-700 ease-out";
+        }
+      }
+
+      // 4. Attack Surface KPI
+      const critBadge = document.getElementById('kpi-critical-badge');
+      const surfaceTitle = document.getElementById('kpi-surface-title');
+      const progressBar = document.getElementById('surface-progress-bar');
+      const critCount = p.counts ? p.counts.critical_exposed : 0;
+
+      if (critCount > 0) {
+        if (critBadge) {
+          critBadge.textContent = `${critCount} CRITICAL`;
+          critBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/15 text-rose-400 border border-rose-500/25";
+        }
+        if (surfaceTitle) surfaceTitle.textContent = firstCrit ? `${firstCrit.process} (${firstCrit.address}:${firstCrit.port})` : "Exposed WAN Services";
+        if (progressBar) {
+          progressBar.className = "bg-rose-500 h-full rounded-full transition-all";
+          progressBar.style.width = `${Math.min(100, critCount * 50)}%`;
+        }
+      } else {
+        if (critBadge) {
+          critBadge.textContent = "0 EXPOSED";
+          critBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25";
+        }
+        if (surfaceTitle) surfaceTitle.textContent = "All Sockets Hardened";
+        if (progressBar) {
+          progressBar.className = "bg-emerald-500 h-full rounded-full transition-all";
+          progressBar.style.width = "100%";
+        }
+      }
+
+      // 5. Gateway KPI
+      const mitmBadge = document.getElementById('kpi-mitm-badge');
+      const gwIp = document.getElementById('kpi-gw-ip');
+      const gwMac = document.getElementById('kpi-gw-mac');
+      if (gwIp) gwIp.textContent = prof.gateway_ip || '127.0.0.1';
+      if (gwMac) gwMac.textContent = `MAC: ${gw.gateway_mac || prof.gateway_mac || '00:00:00:00:00:00'}`;
+      if (mitmBadge) {
+        if (gw.is_mitm_detected) {
+          mitmBadge.textContent = "MITM ALERT";
+          mitmBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse";
+        } else {
+          mitmBadge.textContent = "SECURE";
+          mitmBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25";
+        }
+      }
+
+      // 6. Kernel Firewall / Countermeasures KPI
+      const counterCount = document.getElementById('kpi-countermeasures-count');
+      if (counterCount) {
+        const blkCount = state.ipsStatus ? state.ipsStatus.blocked_count : 0;
+        counterCount.textContent = `${blkCount} Attacker Blocks`;
+      }
+
+      // 7. Threat Triage Feed
+      const feedContainer = document.getElementById('incidents-feed-container');
+      if (feedContainer) {
+        if (incidents.length === 0) {
+          feedContainer.innerHTML = `
+            <div class="p-8 text-center border border-white/[0.06] bg-slate-900/40 rounded-2xl">
+              <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              </div>
+              <div class="text-sm font-bold text-white tracking-tight">Robo Blue Team: Host Telemetry Verified</div>
+              <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">No unacknowledged critical vulnerabilities or active ARP MITM attacks on ${prof.interface || 'wlo1'}.</p>
+            </div>
+          `;
+        } else {
+          feedContainer.innerHTML = incidents.map(inc => {
+            const sevBg = inc.severity === 'CRITICAL' ? 'bg-rose-500/15 border-rose-500/30 text-rose-400' :
+                          (inc.severity === 'HIGH' ? 'bg-orange-500/15 border-orange-500/30 text-orange-400' :
+                          (inc.severity === 'WARNING' ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'));
+            return `
+              <div class="bg-[#0f172a]/70 border border-white/[0.08] hover:border-white/[0.15] rounded-2xl p-4 transition-all shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                  <div class="flex items-center gap-2.5">
+                    <span class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-md border ${sevBg}">${inc.severity}</span>
+                    <span class="text-xs font-bold text-white tracking-tight">${inc.title}</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-xs text-slate-400">
+                    <span class="font-mono text-[11px] text-slate-400">${inc.time_str}</span>
+                    <button onclick="acknowledgeIncident('${inc.id}')" class="px-2.5 py-1 text-[11px] font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-white/[0.08] transition-all">
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mb-3">
+                  <div class="bg-cyan-950/20 border border-cyan-500/15 rounded-xl p-3">
+                    <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                      What Is Happening
+                    </div>
+                    <p class="text-slate-200 leading-relaxed text-[11px] font-sans">${inc.what_happened}</p>
+                  </div>
+                  <div class="bg-rose-950/20 border border-rose-500/15 rounded-xl p-3">
+                    <div class="text-[10px] font-bold text-rose-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                      Why It Matters
+                    </div>
+                    <p class="text-slate-200 leading-relaxed text-[11px] font-sans">${inc.why_it_matters}</p>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2.5 bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-3 text-xs">
+                  <div class="flex items-start gap-2">
+                    <span class="text-indigo-400 font-bold text-xs mt-0.5">🛡️ Advice:</span>
+                    <span class="text-slate-200 text-[11px] font-sans leading-relaxed">${inc.recommendation}</span>
+                  </div>
+                  ${inc.action_label ? `
+                    <button onclick="executeBlueTeamAction('${inc.action_type}', '${inc.target}')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white shadow-md shadow-indigo-500/20 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                      ${inc.action_label}
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 8. Render Attack Surface Table
+      renderAttackSurfaceTable();
+
+      // 9. Render Mini Live Packet Radar inside SOC
+      renderSocLivePackets();
+    }
 
     // Tab Navigation
     function switchTab(tabId) {
       currentTab = tabId;
-      ['network-tab', 'web-tab', 'flow-tab', 'graph-tab', 'graphids-tab', 'ips-tab', 'lan-tab', 'crafter-tab', 'tcp-tab'].forEach(t => {
+      ['blue-team-tab', 'network-tab', 'web-tab', 'flow-tab', 'graph-tab', 'graphids-tab', 'ips-tab', 'lan-tab', 'crafter-tab', 'tcp-tab'].forEach(t => {
         const view = document.getElementById(`view-${t}`);
         const nav = document.getElementById(`nav-${t}`);
         if (!view || !nav) return;
         if (t === tabId) {
           view.classList.remove('hidden');
-          nav.classList.add('border-blue-500', 'text-blue-400');
-          nav.classList.remove('border-transparent', 'text-slate-400');
+          nav.className = "py-2.5 px-3 border-b-2 border-cyan-400 text-cyan-300 flex items-center gap-2 whitespace-nowrap transition-all font-semibold";
         } else {
           view.classList.add('hidden');
-          nav.classList.remove('border-blue-500', 'text-blue-400');
-          nav.classList.add('border-transparent', 'text-slate-400');
+          nav.className = "py-2.5 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap transition-all font-semibold";
         }
       });
+      if (tabId === 'blue-team-tab') {
+        loadBlueTeamReport();
+      }
       if (tabId === 'web-tab') {
         renderWebRequests();
       }
@@ -974,12 +1549,12 @@
       const scenarioBox = document.getElementById('scenario-box');
 
       if (source === 'live') {
-        btnLive.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-emerald-600 text-white shadow-sm flex items-center gap-1.5";
-        btnSim.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700 flex items-center gap-1";
+        if (btnLive) btnLive.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-cyan-500 text-slate-950 shadow-sm flex items-center gap-1.5";
+        if (btnSim) btnSim.className = "px-3 py-1 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1";
         if (scenarioBox) scenarioBox.classList.add('opacity-40', 'pointer-events-none');
       } else {
-        btnSim.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all bg-blue-600 text-white shadow-sm flex items-center gap-1";
-        btnLive.className = "px-2.5 py-1 text-xs font-semibold rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700 flex items-center gap-1.5";
+        if (btnSim) btnSim.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1";
+        if (btnLive) btnLive.className = "px-3 py-1 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
         if (scenarioBox) scenarioBox.classList.remove('opacity-40', 'pointer-events-none');
       }
     }
@@ -1063,34 +1638,43 @@
     }
 
     function renderAll() {
-      // 1. Ticker Stats
-      document.getElementById('stat-total-pkts').textContent = state.totalPackets;
-      document.getElementById('stat-total-flows').textContent = state.totalFlows;
-      document.getElementById('stat-graph-nodes').textContent = `${state.nodes.length} IPs`;
-      document.getElementById('stat-mean-mse').textContent = state.meanMse.toFixed(4);
-      document.getElementById('stat-blocked-count').textContent = `${state.ipsStatus ? state.ipsStatus.blocked_count : 0} Blocked`;
+      // 1. Ticker Stats (null-safe)
+      const statTotalPkts = document.getElementById('stat-total-pkts');
+      if (statTotalPkts) statTotalPkts.textContent = state.totalPackets;
+      const statTotalFlows = document.getElementById('stat-total-flows');
+      if (statTotalFlows) statTotalFlows.textContent = state.totalFlows;
+      const statGraphNodes = document.getElementById('stat-graph-nodes');
+      if (statGraphNodes) statGraphNodes.textContent = `${state.nodes.length} IPs`;
+      const statMeanMse = document.getElementById('stat-mean-mse');
+      if (statMeanMse) {
+        statMeanMse.textContent = state.meanMse.toFixed(4);
+        const mseColor = state.meanMse > 0.042 ? 'text-rose-400' : 'text-emerald-400';
+        statMeanMse.className = `font-mono text-sm font-bold ${mseColor}`;
+      }
+      const statBlockedCount = document.getElementById('stat-blocked-count');
+      if (statBlockedCount) statBlockedCount.textContent = `${state.ipsStatus ? state.ipsStatus.blocked_count : 0} Blocked`;
 
-      const mseColor = state.meanMse > 0.042 ? 'text-rose-400' : 'text-emerald-400';
-      document.getElementById('stat-mean-mse').className = `font-mono text-sm font-bold ${mseColor}`;
+      // 2. Blue Team Live Packet Radar (inside SOC tab)
+      renderSocLivePackets();
 
-      // 2. Packet Table
+      // 3. Packet Table
       renderPacketTable();
 
-      // 3. Flow Table
+      // 4. Flow Table
       renderFlowTable();
 
-      // 4. Graph Topology
+      // 5. Graph Topology
       if (currentTab === 'graph-tab') {
         drawTopology();
       }
 
-      // 5. AI Anomaly Tab
+      // 6. AI Anomaly Tab
       renderAiTab();
 
-      // 6. IPS Defense Tab
+      // 7. IPS Defense Tab
       renderIpsTab();
 
-      // 7. Web Requests Tab
+      // 8. Web Requests Tab
       renderWebRequests();
     }
 
@@ -1922,6 +2506,17 @@
 
     // Start background telemetry loop (polling every 300ms)
     setInterval(pollData, 300);
+
+    // Refresh Blue Team SOC every 2500ms
+    setInterval(() => {
+      if (currentTab === 'blue-team-tab') {
+        loadBlueTeamReport();
+      }
+    }, 2500);
+
+    // Initial load: start on Robo Blue Team SOC
+    switchTab('blue-team-tab');
+    loadBlueTeamReport();
   </script>
 </body>
 </html>
