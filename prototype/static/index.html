@@ -88,9 +88,14 @@
       </button>
 
       <!-- Re-Audit Host Button -->
-      <button onclick="reauditHost()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-md shadow-cyan-500/15 flex items-center gap-1.5 transition-all">
+      <button onclick="reauditHost()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-md shadow-cyan-500/15 flex items-center gap-1.5 transition-all cursor-pointer">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
         Re-Audit
+      </button>
+      <!-- Export Audit Button -->
+      <button onclick="exportAuditReport()" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-white/10 text-cyan-300 shadow-md flex items-center gap-1.5 transition-all cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Export Audit
       </button>
     </div>
   </header>
@@ -183,8 +188,8 @@
         </div>
       </div>
 
-      <!-- Executive 4-Card KPI Deck -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Executive 5-Card KPI Deck -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
         <!-- KPI 1: Host Security Posture Score (With SVG Donut Ring) -->
         <div class="glass-panel rounded-2xl p-5 flex items-center gap-4 transition-all hover:border-white/[0.12]">
@@ -246,6 +251,35 @@
             <p class="text-xs text-slate-400 mt-0.5">GNN Anomaly Engine Running</p>
           </div>
           <p class="text-[11px] text-cyan-400/90 mt-2 font-medium">● Real-time Drop Rules Ready</p>
+        </div>
+
+        <!-- KPI 5: Linux Kernel Security Stack -->
+        <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-white/[0.12]">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kernel Hardening</span>
+            <span id="kpi-kernel-badge" class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">AUDITED</span>
+          </div>
+          <div>
+            <div id="kpi-kernel-status" class="text-base font-bold text-white mt-2">sysctl Protected</div>
+            <div class="text-[10px] text-slate-400 mt-2 space-y-1 font-mono">
+              <div class="flex items-center justify-between">
+                <span>SYN Cookies</span>
+                <span id="kpi-kernel-syn" class="text-emerald-400 font-semibold">Enabled ✓</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Anti-Spoof (rp)</span>
+                <span id="kpi-kernel-rp" class="text-amber-400 font-semibold">Scanning...</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>ICMP Redirects</span>
+                <span id="kpi-kernel-redirects" class="text-emerald-400 font-semibold">Scanning...</span>
+              </div>
+            </div>
+          </div>
+          <button onclick="openKernelRemediationModal()" class="mt-3 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center justify-center gap-1 transition-all cursor-pointer">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Review Sysctl Stack
+          </button>
         </div>
 
       </div>
@@ -1070,6 +1104,56 @@
 
   </main>
 
+  <!-- Interactive Remediation Modal -->
+  <div id="remediation-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0b101c] border border-cyan-500/30 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative shadow-cyan-950/50 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          </div>
+          <div>
+            <h3 id="modal-remediation-title" class="text-base font-bold text-white tracking-tight">One-Click Remediation</h3>
+            <p class="text-xs text-slate-400">Autonomous Linux Security Countermeasure</p>
+          </div>
+        </div>
+        <button onclick="closeRemediationModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Impact & Rationale</span>
+          <p id="modal-remediation-desc" class="text-xs text-slate-200 leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-white/5 font-sans"></p>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Linux Hardening Command</span>
+            <button onclick="copyRemediationCommand()" id="btn-copy-cmd" class="text-[10px] text-slate-400 hover:text-cyan-300 flex items-center gap-1 font-mono transition-colors cursor-pointer">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <span>Copy Command</span>
+            </button>
+          </div>
+          <pre id="modal-remediation-cmd" class="text-xs font-mono bg-black/70 text-emerald-400 p-3 rounded-xl border border-white/10 overflow-x-auto whitespace-pre-wrap select-all"></pre>
+        </div>
+
+        <div id="modal-remediation-feedback" class="hidden text-xs p-2.5 rounded-xl border font-mono"></div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-white/5">
+          <button onclick="closeRemediationModal()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all cursor-pointer">
+            Close
+          </button>
+          <button id="modal-btn-apply" onclick="applyModalRemediation()" class="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-md shadow-cyan-500/20 flex items-center gap-1.5 transition-all cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Apply Hardening
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let isStreaming = true;
@@ -1152,6 +1236,177 @@
         loadBlueTeamReport();
       } catch (err) {
         console.error("Action execution error:", err);
+      }
+    }
+
+    let currentRemediationAction = null;
+
+    function openRemediationModal(title, desc, cmd, actionType, target) {
+      currentRemediationAction = { actionType, target, cmd };
+      const modal = document.getElementById('remediation-modal');
+      const titleEl = document.getElementById('modal-remediation-title');
+      const descEl = document.getElementById('modal-remediation-desc');
+      const cmdEl = document.getElementById('modal-remediation-cmd');
+      const feedbackEl = document.getElementById('modal-remediation-feedback');
+      const applyBtn = document.getElementById('modal-btn-apply');
+
+      if (titleEl) titleEl.textContent = title || "Security Remediation";
+      if (descEl) descEl.textContent = desc || "Review the recommended system hardening countermeasure.";
+      if (cmdEl) cmdEl.textContent = cmd || "# No shell command provided";
+      if (feedbackEl) {
+        feedbackEl.className = "hidden text-xs p-2.5 rounded-xl border font-mono";
+        feedbackEl.textContent = "";
+      }
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.innerHTML = `
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          Apply Hardening
+        `;
+      }
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeRemediationModal() {
+      const modal = document.getElementById('remediation-modal');
+      if (modal) modal.classList.add('hidden');
+      currentRemediationAction = null;
+    }
+
+    function copyRemediationCommand() {
+      if (!currentRemediationAction || !currentRemediationAction.cmd) return;
+      navigator.clipboard.writeText(currentRemediationAction.cmd).then(() => {
+        const btn = document.getElementById('btn-copy-cmd');
+        if (btn) {
+          const original = btn.innerHTML;
+          btn.innerHTML = `<span class="text-emerald-400 font-bold">✓ Copied to Clipboard</span>`;
+          setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+      }).catch(err => {
+        console.error("Clipboard copy failed:", err);
+      });
+    }
+
+    async function applyModalRemediation() {
+      if (!currentRemediationAction) return;
+      const { actionType, target } = currentRemediationAction;
+      const feedbackEl = document.getElementById('modal-remediation-feedback');
+      const applyBtn = document.getElementById('modal-btn-apply');
+
+      if (applyBtn) {
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = `<span class="animate-pulse">Applying...</span>`;
+      }
+
+      try {
+        if (actionType === 'harden_sysctl') {
+          const res = await fetch('/api/blue_team/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'harden_sysctl', target: target || 'all' })
+          });
+          const data = await res.json();
+          if (feedbackEl) {
+            feedbackEl.className = "text-xs p-2.5 rounded-xl border font-mono bg-emerald-500/10 border-emerald-500/30 text-emerald-300 block";
+            feedbackEl.textContent = `✓ sysctl parameter applied: ${data.detail || 'Kernel hardening successful.'}`;
+          }
+        } else if (actionType === 'block_ip') {
+          const res = await fetch('/api/ips/block', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ip: target })
+          });
+          if (feedbackEl) {
+            feedbackEl.className = "text-xs p-2.5 rounded-xl border font-mono bg-rose-500/10 border-rose-500/30 text-rose-300 block";
+            feedbackEl.textContent = `✓ IP ${target} blocked via Linux kernel firewall rules.`;
+          }
+        } else {
+          await executeBlueTeamAction(actionType, target);
+          if (feedbackEl) {
+            feedbackEl.className = "text-xs p-2.5 rounded-xl border font-mono bg-cyan-500/10 border-cyan-500/30 text-cyan-300 block";
+            feedbackEl.textContent = `✓ Action '${actionType}' executed for target '${target}'.`;
+          }
+        }
+
+        setTimeout(() => {
+          loadBlueTeamReport();
+        }, 500);
+
+      } catch (err) {
+        console.error("Remediation execution error:", err);
+        if (feedbackEl) {
+          feedbackEl.className = "text-xs p-2.5 rounded-xl border font-mono bg-rose-500/10 border-rose-500/30 text-rose-300 block";
+          feedbackEl.textContent = `Remediation note: ${err.message}. If permission was denied, copy and run command with sudo in terminal.`;
+        }
+      } finally {
+        if (applyBtn) {
+          applyBtn.disabled = false;
+          applyBtn.innerHTML = `
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Applied
+          `;
+        }
+      }
+    }
+
+    function openKernelRemediationModal() {
+      if (!blueTeamReport) return;
+      const stack = blueTeamReport.kernel_hardening || {};
+      const nonCompliant = Object.entries(stack).filter(([_, info]) => !info.compliant);
+
+      if (nonCompliant.length === 0) {
+        openRemediationModal(
+          "Linux Kernel Stack Fully Hardened",
+          "All inspected Linux kernel network stack sysctl parameters (Anti-DoS SYN Cookies, Anti-Spoofing Reverse Path Filtering, and ICMP Redirects) are active and compliant.",
+          "# Kernel sysctl network stack is fully compliant:\nsysctl net.ipv4.tcp_syncookies net.ipv4.conf.all.rp_filter net.ipv4.conf.all.accept_redirects",
+          "harden_sysctl",
+          "all"
+        );
+      } else {
+        const cmds = nonCompliant.map(([_, info]) => info.remediation).join('\n');
+        const desc = `The Robo Blue Hat agent identified ${nonCompliant.length} non-compliant kernel parameters: ` +
+          nonCompliant.map(([_, info]) => `${info.name} (Current: ${info.current_val}, Expected: ${info.expected_val})`).join('; ') +
+          ". Applying these sysctl values prevents IP spoofing, SYN flood exhaustion, and ICMP route poisoning.";
+        openRemediationModal(
+          "Linux Kernel Security Hardening",
+          desc,
+          cmds,
+          "harden_sysctl",
+          "all"
+        );
+      }
+    }
+
+    function openIncidentRemediation(incId) {
+      if (!blueTeamReport || !blueTeamReport.incidents) return;
+      const inc = blueTeamReport.incidents.find(i => i.id === incId);
+      if (!inc) return;
+      openRemediationModal(
+        inc.title,
+        `${inc.what_happened} ${inc.why_it_matters}`,
+        inc.remediation_cmd || `# Remediation command for ${inc.target}\n# Recommendation: ${inc.recommendation}`,
+        inc.action_type,
+        inc.target
+      );
+    }
+
+    async function exportAuditReport() {
+      try {
+        const res = await fetch('/api/blue_team/audit_export');
+        if (!res.ok) throw new Error("Failed to export security audit report");
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `blue_team_security_audit_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Export audit report failed:", err);
+        alert("Failed to export security audit: " + err.message);
       }
     }
 
@@ -1396,7 +1651,41 @@
         counterCount.textContent = `${blkCount} Attacker Blocks`;
       }
 
-      // 7. Threat Triage Feed
+      // 7. Kernel Security Stack KPI 5
+      const kernelStack = data.kernel_hardening || {};
+      const kBadge = document.getElementById('kpi-kernel-badge');
+      const kStatus = document.getElementById('kpi-kernel-status');
+      const kSyn = document.getElementById('kpi-kernel-syn');
+      const kRp = document.getElementById('kpi-kernel-rp');
+      const kRedirects = document.getElementById('kpi-kernel-redirects');
+
+      const nonCompliant = Object.values(kernelStack).filter(item => !item.compliant);
+      if (kBadge && kStatus) {
+        if (nonCompliant.length > 0) {
+          kBadge.textContent = `${nonCompliant.length} WEAK`;
+          kBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/25";
+          kStatus.textContent = "Hardening Advised";
+        } else {
+          kBadge.textContent = "COMPLIANT";
+          kBadge.className = "px-2 py-0.5 text-[10px] font-bold rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/25";
+          kStatus.textContent = "sysctl Hardened";
+        }
+      }
+
+      if (kSyn && kernelStack.tcp_syncookies) {
+        const syn = kernelStack.tcp_syncookies;
+        kSyn.innerHTML = syn.compliant ? `<span class="text-emerald-400 font-semibold">Enabled (1) ✓</span>` : `<span class="text-rose-400 font-semibold">Disabled (0) ⚠️</span>`;
+      }
+      if (kRp && kernelStack.rp_filter) {
+        const rp = kernelStack.rp_filter;
+        kRp.innerHTML = rp.compliant ? `<span class="text-emerald-400 font-semibold">Strict (1) ✓</span>` : `<span class="text-amber-400 font-semibold">Weak (${rp.current_val}) ⚠️</span>`;
+      }
+      if (kRedirects && kernelStack.accept_redirects) {
+        const ar = kernelStack.accept_redirects;
+        kRedirects.innerHTML = ar.compliant ? `<span class="text-emerald-400 font-semibold">Blocked (0) ✓</span>` : `<span class="text-rose-400 font-semibold">Accepted (${ar.current_val}) ⚠️</span>`;
+      }
+
+      // 8. Threat Triage Feed
       const feedContainer = document.getElementById('incidents-feed-container');
       if (feedContainer) {
         if (incidents.length === 0) {
@@ -1423,7 +1712,7 @@
                   </div>
                   <div class="flex items-center gap-2 text-xs text-slate-400">
                     <span class="font-mono text-[11px] text-slate-400">${inc.time_str}</span>
-                    <button onclick="acknowledgeIncident('${inc.id}')" class="px-2.5 py-1 text-[11px] font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-white/[0.08] transition-all">
+                    <button onclick="acknowledgeIncident('${inc.id}')" class="px-2.5 py-1 text-[11px] font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-white/[0.08] transition-all cursor-pointer">
                       Dismiss
                     </button>
                   </div>
@@ -1447,15 +1736,23 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-2.5 bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-3 text-xs">
-                  <div class="flex items-start gap-2">
+                  <div class="flex items-start gap-2 max-w-xl">
                     <span class="text-indigo-400 font-bold text-xs mt-0.5">🛡️ Advice:</span>
                     <span class="text-slate-200 text-[11px] font-sans leading-relaxed">${inc.recommendation}</span>
                   </div>
-                  ${inc.action_label ? `
-                    <button onclick="executeBlueTeamAction('${inc.action_type}', '${inc.target}')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white shadow-md shadow-indigo-500/20 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
-                      ${inc.action_label}
-                    </button>
-                  ` : ''}
+                  <div class="flex items-center gap-2">
+                    ${inc.remediation_cmd ? `
+                      <button onclick="openIncidentRemediation('${inc.id}')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-md shadow-cyan-500/20 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        Remediate
+                      </button>
+                    ` : ''}
+                    ${inc.action_label && !inc.remediation_cmd ? `
+                      <button onclick="executeBlueTeamAction('${inc.action_type}', '${inc.target}')" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white shadow-md shadow-indigo-500/20 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                        ${inc.action_label}
+                      </button>
+                    ` : ''}
+                  </div>
                 </div>
               </div>
             `;
@@ -1963,8 +2260,15 @@
         let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">Clean</span>';
         if (r.status === 'Blocked by IPS') {
           statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/40 font-bold animate-pulse">Blocked (IPS)</span>';
+        } else if (r.status && r.status.startsWith('Threat:')) {
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold animate-pulse" title="${r.status}">${r.status}</span>`;
         } else if (r.is_attack || r.status === 'Suspicious') {
           statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold">Suspicious</span>';
+        }
+
+        let entropyBadge = '';
+        if (r.entropy && r.entropy >= 3.8) {
+          entropyBadge = `<span class="px-1.5 py-0.2 text-[9px] rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono" title="High Domain Shannon Entropy: ${r.entropy}">H:${r.entropy}</span>`;
         }
 
         tr.innerHTML = `
@@ -1979,9 +2283,10 @@
             <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${methodBadge}">${r.method || r.protocol}</span>
           </td>
           <td class="py-2.5 px-3 font-medium text-white text-xs">
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <span class="text-base">${flag}</span>
               <span class="text-sky-300 font-semibold tracking-wide">${r.domain}</span>
+              ${entropyBadge}
             </div>
           </td>
           <td class="py-2.5 px-3 text-slate-300 text-xs font-mono truncate max-w-xs" title="${r.url}">

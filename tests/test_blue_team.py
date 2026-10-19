@@ -5,6 +5,9 @@ from prototype.blue_team_engine import (
     DynamicNetworkDetector,
     GatewayIntegrityWatchdog,
     HostAttackSurfaceAuditor,
+    KernelSecurityAuditor,
+    ReconnaissanceDetector,
+    ThreatIntelligenceClassifier,
 )
 
 
@@ -137,6 +140,76 @@ def test_full_posture_report():
     assert "posture" in report
     assert "attack_surface" in report
     assert "gateway_integrity" in report
+    assert "kernel_hardening" in report
+    assert "recon_scans" in report
     assert "incidents" in report
     assert "score" in report["posture"]
     assert "grade" in report["posture"]
+
+
+def test_kernel_security_auditor():
+    res = KernelSecurityAuditor.audit_kernel_stack()
+    assert isinstance(res, dict)
+    assert "tcp_syncookies" in res
+    assert "rp_filter" in res
+    assert "accept_redirects" in res
+    for _param, info in res.items():
+        assert "name" in info
+        assert "path" in info
+        assert "expected_val" in info
+        assert "compliant" in info
+        assert "remediation" in info
+
+
+def test_threat_intelligence_classifier():
+    # Test DGA domain entropy calculation
+    entropy_normal = ThreatIntelligenceClassifier.calculate_domain_entropy("google.com")
+    entropy_dga = ThreatIntelligenceClassifier.calculate_domain_entropy("qkjw892hfxb391nxzp.com")
+    assert entropy_dga > entropy_normal
+    assert entropy_dga >= 3.5
+
+    # Test suspicious port detection
+    res_suspicious = ThreatIntelligenceClassifier.analyze_session("198.51.100.2", 4444, "unknown.org")
+    assert res_suspicious["is_suspicious"] is True
+    assert res_suspicious["severity"] == "CRITICAL"
+    assert any("4444" in ind for ind in res_suspicious["indicators"])
+
+    # Test cleartext credential detection
+    res_cred = ThreatIntelligenceClassifier.analyze_session("198.51.100.2", 80, "site.com", uri="/login?password=secret")
+    assert res_cred["is_suspicious"] is True
+    assert any("Credential" in ind for ind in res_cred["indicators"])
+
+
+def test_reconnaissance_detector():
+    detector = ReconnaissanceDetector(window_sec=5.0, threshold_ports=4)
+    now = time.time()
+    scanner_ip = "192.0.2.77"
+
+    # Probe 3 ports -> below threshold
+    assert detector.record_probe(scanner_ip, 22, now) is None
+    assert detector.record_probe(scanner_ip, 80, now + 0.1) is None
+    assert detector.record_probe(scanner_ip, 443, now + 0.2) is None
+
+    # Probe 4th port -> triggers reconnaissance alert
+    event = detector.record_probe(scanner_ip, 3389, now + 0.3)
+    assert event is not None
+    assert event["src_ip"] == scanner_ip
+    assert event["count"] == 4
+    assert 22 in event["ports_probed"]
+    assert 3389 in event["ports_probed"]
+    assert len(detector.get_recent_scans()) >= 1
+
+
+def test_security_audit_export():
+    engine = BlueTeamEngine()
+    audit = engine.generate_security_audit_export()
+    assert "title" in audit
+    assert "audit_timestamp" in audit
+    assert "audit_time_utc" in audit
+    assert "executive_summary" in audit
+    assert "kernel_hardening_audit" in audit
+    assert "listening_attack_surface" in audit
+    assert "gateway_arp_integrity" in audit
+    assert "active_security_incidents" in audit
+    assert audit["executive_summary"]["posture_score"] > 0
+

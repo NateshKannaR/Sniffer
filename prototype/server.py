@@ -42,6 +42,7 @@ class PrototypeState:
         self.latest_ai_results = []
         self.latest_mean_mse = 0.0124
         self.web_requests = deque(maxlen=150)
+        self.recent_threat_sessions = deque(maxlen=40)
         self.lock = threading.Lock()
 
         # Start live physical Wi-Fi sniffer right away
@@ -93,6 +94,9 @@ class PrototypeState:
             or pkt.src_port in (80, 443, 8080, 53)
         )
         is_telemetry_loop = (pkt.dst_port == 8090 or pkt.src_port == 8090)
+        # Multi-port reconnaissance probe tracking
+        if pkt.src_ip != self.blue_team.network_profile.get("host_ip") and pkt.dst_port:
+            self.blue_team.recon_detector.record_probe(pkt.src_ip, pkt.dst_port, pkt.timestamp)
 
         if is_web and not is_telemetry_loop:
             clean_domain = domain or (geo.get("org") if geo.get("org") != "Local Private Subnet" else pkt.dst_ip)
@@ -107,6 +111,12 @@ class PrototypeState:
 
             url = pkt_dict.get("http_uri") or (f"https://{clean_domain}/" if method == "TLS 1.3" else f"http://{clean_domain}/")
             status = "Blocked by IPS" if pkt.dst_ip in self.inference_runner.blocked_ips else ("Suspicious" if pkt.is_attack else "Clean")
+
+            # Outbound threat intelligence evaluation
+            threat_eval = self.blue_team.threat_classifier.analyze_session(pkt.dst_ip, pkt.dst_port, clean_domain, url)
+            if threat_eval.get("is_suspicious"):
+                status = f"Threat: {threat_eval['indicators'][0][:24]}"
+                self.recent_threat_sessions.appendleft(threat_eval)
 
             req_entry = {
                 "id": pkt.id,
@@ -123,8 +133,10 @@ class PrototypeState:
                 "dst_port": pkt.dst_port,
                 "geo": geo,
                 "status": status,
-                "is_attack": pkt.is_attack,
+                "is_attack": pkt.is_attack or threat_eval.get("is_suspicious", False),
                 "bytes": pkt.length,
+                "entropy": threat_eval.get("entropy", 0.0),
+                "threat_flags": threat_eval.get("indicators", []),
             }
             self.web_requests.appendleft(req_entry)
 
@@ -198,6 +210,7 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                 report = GLOBAL_STATE.blue_team.get_full_posture_report(
                     blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
                     recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                    threat_sessions=list(GLOBAL_STATE.recent_threat_sessions),
                 )
             self._send_json(report)
         elif parsed.path == "/api/blue_team/incidents":
@@ -205,6 +218,7 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                 report = GLOBAL_STATE.blue_team.get_full_posture_report(
                     blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
                     recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                    threat_sessions=list(GLOBAL_STATE.recent_threat_sessions),
                 )
             self._send_json({"incidents": report["incidents"], "posture": report["posture"]})
         elif parsed.path == "/api/blue_team/reaudit":
@@ -213,8 +227,16 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                 report = GLOBAL_STATE.blue_team.get_full_posture_report(
                     blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
                     recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                    threat_sessions=list(GLOBAL_STATE.recent_threat_sessions),
                 )
             self._send_json(report)
+        elif parsed.path == "/api/blue_team/audit_export":
+            with GLOBAL_STATE.lock:
+                export_data = GLOBAL_STATE.blue_team.generate_security_audit_export(
+                    blocked_ips=GLOBAL_STATE.inference_runner.blocked_ips,
+                    recent_anomalies=[r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")],
+                )
+            self._send_json(export_data)
         elif parsed.path == "/api/lan":
             devices = GLOBAL_STATE.lan_scanner.scan_lan()
             subnet = GLOBAL_STATE.blue_team.network_profile.get("subnet_cidr") or GLOBAL_STATE.blue_team.network_profile.get("subnet", "")
@@ -256,6 +278,12 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                     GLOBAL_STATE.blue_team.active_countermeasures.append({
                         "rule": f"ufw deny {target}",
                         "description": f"Isolate port {target} from external interface",
+                        "timestamp": time.time(),
+                    })
+                elif action == "harden_sysctl" and target:
+                    GLOBAL_STATE.blue_team.active_countermeasures.append({
+                        "rule": target,
+                        "description": "Kernel sysctl hardening parameter applied",
                         "timestamp": time.time(),
                     })
                 elif action == "acknowledge" and target:
@@ -366,7 +394,12 @@ class PrototypeHandler(BaseHTTPRequestHandler):
                         attack_surface=GLOBAL_STATE.blue_team.auditor.audit_listening_ports(),
                         gateway_integrity=GLOBAL_STATE.blue_team.gateway_watchdog.check_integrity(),
                         anomalies_count=len([r for r in GLOBAL_STATE.latest_ai_results if r.get("is_anomaly")]),
+                        kernel_stack=GLOBAL_STATE.blue_team.kernel_auditor.audit_kernel_stack(),
+                        recon_scans_count=len(GLOBAL_STATE.blue_team.recon_detector.get_recent_scans()),
                     ),
+                    "kernel_hardening": GLOBAL_STATE.blue_team.kernel_auditor.audit_kernel_stack(),
+                    "recon_scans": GLOBAL_STATE.blue_team.recon_detector.get_recent_scans(),
+                    "recent_threats": list(GLOBAL_STATE.recent_threat_sessions)[:6],
                 },
             }
         self._send_json(data)

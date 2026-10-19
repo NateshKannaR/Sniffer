@@ -1,8 +1,10 @@
+import math
 import os
 import re
 import socket
 import subprocess
 import time
+from collections import Counter
 from typing import Any
 
 
@@ -297,6 +299,179 @@ class GatewayIntegrityWatchdog:
         return result
 
 
+class KernelSecurityAuditor:
+    """Audits real Linux kernel sysctl network parameters (/proc/sys/net/ipv4/*)."""
+
+    SYSCTL_PARAMETERS = {
+        "tcp_syncookies": {
+            "path": "/proc/sys/net/ipv4/tcp_syncookies",
+            "name": "TCP SYN Cookies (Anti-DoS)",
+            "expected": 1,
+            "severity": "CRITICAL",
+            "risk": "Without SYN cookies, the kernel connection backlog can be exhausted by simple SYN flood attacks.",
+            "remediation": "sudo sysctl -w net.ipv4.tcp_syncookies=1",
+        },
+        "rp_filter": {
+            "path": "/proc/sys/net/ipv4/conf/all/rp_filter",
+            "name": "Reverse Path Filtering (Anti-Spoofing)",
+            "expected": 1,
+            "severity": "HIGH",
+            "risk": "Disabled or relaxed reverse path filtering allows spoofed IP packets to pass through the network stack.",
+            "remediation": "sudo sysctl -w net.ipv4.conf.all.rp_filter=1",
+        },
+        "accept_redirects": {
+            "path": "/proc/sys/net/ipv4/conf/all/accept_redirects",
+            "name": "ICMP Redirect Acceptance (Anti-Route MITM)",
+            "expected": 0,
+            "severity": "HIGH",
+            "risk": "Accepting ICMP redirects allows rogue devices on the Wi-Fi LAN to alter your kernel routing table and intercept traffic.",
+            "remediation": "sudo sysctl -w net.ipv4.conf.all.accept_redirects=0",
+        },
+        "ip_forward": {
+            "path": "/proc/sys/net/ipv4/ip_forward",
+            "name": "IP Packet Forwarding",
+            "expected": 0,
+            "severity": "WARNING",
+            "risk": "Unintentional packet forwarding turns your personal host into an unauthorized network router/bridge for third parties.",
+            "remediation": "sudo sysctl -w net.ipv4.ip_forward=0",
+        },
+        "icmp_echo_ignore_broadcasts": {
+            "path": "/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts",
+            "name": "Smurf Amplification Defense (Broadcast Ping Ignore)",
+            "expected": 1,
+            "severity": "MEDIUM",
+            "risk": "Replying to broadcast ICMP echoes can participate in network Smurf amplification attacks.",
+            "remediation": "sudo sysctl -w net.ipv4.icmp_echo_ignore_broadcasts=1",
+        },
+    }
+
+    @classmethod
+    def audit_kernel_stack(cls) -> dict[str, Any]:
+        results = {}
+        for key, conf in cls.SYSCTL_PARAMETERS.items():
+            path = conf["path"]
+            val = None
+            if os.path.exists(path):
+                try:
+                    with open(path) as f:
+                        val = int(f.read().strip())
+                except (ValueError, OSError):
+                    val = None
+
+            is_compliant = (val == conf["expected"])
+            results[key] = {
+                "name": conf["name"],
+                "path": path,
+                "current_val": val,
+                "expected_val": conf["expected"],
+                "compliant": is_compliant,
+                "severity": conf["severity"],
+                "risk": conf["risk"],
+                "remediation": conf["remediation"],
+            }
+        return results
+
+
+class ThreatIntelligenceClassifier:
+    """Evaluates outbound network sessions, domain Shannon entropy, and suspicious ports."""
+
+    SUSPICIOUS_REMOTE_PORTS = {
+        4444: ("Metasploit Default Listener / Reverse Shell", "CRITICAL"),
+        1337: ("Hacker / PoC Exploit Listener", "CRITICAL"),
+        6667: ("IRC Botnet Command & Control (C2)", "CRITICAL"),
+        2323: ("Mirai IoT Telnet Alternate", "HIGH"),
+        3389: ("Exposed Remote Desktop Protocol (RDP)", "WARNING"),
+        5555: ("Android ADB Unsecured Shell", "HIGH"),
+        8888: ("Generic Alternate Web / C2 Proxy", "INFO"),
+    }
+
+    @staticmethod
+    def calculate_domain_entropy(domain: str) -> float:
+        """Calculates Shannon entropy for domain name string to detect DGA/C2 domains."""
+        if not domain or len(domain) < 4:
+            return 0.0
+        parts = domain.split(".")
+        main_label = parts[0] if len(parts) >= 2 else domain
+        length = len(main_label)
+        if length == 0:
+            return 0.0
+        counts = Counter(main_label.lower())
+        entropy = 0.0
+        for count in counts.values():
+            p = count / length
+            entropy -= p * math.log2(p)
+        return round(entropy, 3)
+
+    @classmethod
+    def analyze_session(cls, dst_ip: str, dst_port: int, domain: str = "", uri: str = "") -> dict[str, Any]:
+        flags = []
+        severity = "CLEAN"
+
+        if dst_port in cls.SUSPICIOUS_REMOTE_PORTS:
+            desc, sev = cls.SUSPICIOUS_REMOTE_PORTS[dst_port]
+            flags.append(f"Suspicious Outbound Port {dst_port}: {desc}")
+            severity = sev
+
+        entropy = cls.calculate_domain_entropy(domain)
+        if entropy >= 3.85 and len(domain.split(".")[0]) >= 12:
+            flags.append(f"High Domain Entropy ({entropy:.2f}): Possible DGA / C2 beacon ({domain})")
+            if severity != "CRITICAL":
+                severity = "HIGH"
+
+        if uri and any(s in uri.lower() for s in ("password=", "passwd=", "secret=", "apikey=", "token=")):
+            flags.append("Cleartext Credential Transmission in URI query string")
+            if severity not in ("CRITICAL", "HIGH"):
+                severity = "WARNING"
+
+        return {
+            "dst_ip": dst_ip,
+            "dst_port": dst_port,
+            "domain": domain,
+            "entropy": entropy,
+            "is_suspicious": len(flags) > 0,
+            "severity": severity,
+            "indicators": flags,
+        }
+
+
+class ReconnaissanceDetector:
+    """Sliding-window detector for multi-port sweeps and network reconnaissance."""
+
+    def __init__(self, window_sec: float = 12.0, threshold_ports: int = 4):
+        self.window_sec = window_sec
+        self.threshold_ports = threshold_ports
+        self.ip_port_history: dict[str, list[tuple[float, int]]] = {}
+        self.detected_scans: dict[str, dict[str, Any]] = {}
+
+    def record_probe(self, src_ip: str, dst_port: int, now: float = None) -> dict[str, Any] | None:
+        if not src_ip or dst_port <= 0:
+            return None
+        now = now or time.time()
+
+        cutoff = now - self.window_sec
+        history = [entry for entry in self.ip_port_history.get(src_ip, []) if entry[0] >= cutoff]
+        history.append((now, dst_port))
+        self.ip_port_history[src_ip] = history
+
+        unique_ports = {entry[1] for entry in history}
+        if len(unique_ports) >= self.threshold_ports:
+            scan_event = {
+                "src_ip": src_ip,
+                "ports_probed": sorted(list(unique_ports)),
+                "count": len(unique_ports),
+                "timestamp": now,
+                "window_sec": self.window_sec,
+                "first_seen": history[0][0],
+            }
+            self.detected_scans[src_ip] = scan_event
+            return scan_event
+        return None
+
+    def get_recent_scans(self) -> list[dict[str, Any]]:
+        now = time.time()
+        return [s for s in self.detected_scans.values() if now - s["timestamp"] <= 60.0]
+
+
 class BlueTeamEngine:
     """The central Robo Blue Hat Team brain: audits host exposure, triages threats, computes posture score."""
 
@@ -304,6 +479,9 @@ class BlueTeamEngine:
         self.network_detector = DynamicNetworkDetector()
         self.network_profile = self.network_detector.detect_network_profile()
         self.auditor = HostAttackSurfaceAuditor()
+        self.kernel_auditor = KernelSecurityAuditor()
+        self.threat_classifier = ThreatIntelligenceClassifier()
+        self.recon_detector = ReconnaissanceDetector()
         self.gateway_watchdog = GatewayIntegrityWatchdog(
             expected_gateway_ip=self.network_profile["gateway_ip"],
             expected_gateway_mac=self.network_profile["gateway_mac"],
@@ -328,6 +506,8 @@ class BlueTeamEngine:
         gateway_integrity: dict[str, Any],
         anomalies_count: int = 0,
         unencrypted_flows_count: int = 0,
+        kernel_stack: dict[str, Any] = None,
+        recon_scans_count: int = 0,
     ) -> dict[str, Any]:
         """Calculates 0-100% Host Security Posture Score, Grade, and breakdown."""
         score = 100
@@ -390,6 +570,26 @@ class BlueTeamEngine:
                 "reason": f"{unencrypted_flows_count} Unencrypted web/data session(s) detected",
             })
 
+        if kernel_stack:
+            for k_key, k_info in kernel_stack.items():
+                if not k_info.get("compliant", True):
+                    k_pts = 8 if k_info.get("severity") in ("CRITICAL", "HIGH") else 4
+                    score -= k_pts
+                    deductions.append({
+                        "category": "Kernel Hardening",
+                        "points": -k_pts,
+                        "reason": f"Kernel sysctl weakness: {k_info.get('name')} ({k_info.get('remediation')})",
+                    })
+
+        if recon_scans_count > 0:
+            r_pts = min(25, recon_scans_count * 12)
+            score -= r_pts
+            deductions.append({
+                "category": "Port Reconnaissance",
+                "points": -r_pts,
+                "reason": f"{recon_scans_count} Active Port Sweep / Reconnaissance Probe(s) detected",
+            })
+
         final_score = max(15, min(100, score))
 
         if final_score >= 95:
@@ -438,6 +638,9 @@ class BlueTeamEngine:
         gateway_integrity: dict[str, Any],
         blocked_ips: dict[str, Any],
         recent_anomalies: list[dict[str, Any]],
+        kernel_stack: dict[str, Any] = None,
+        recon_scans: list[dict[str, Any]] = None,
+        threat_sessions: list[dict[str, Any]] = None,
     ) -> list[dict[str, Any]]:
         """Synthesizes raw host events into plain-English Blue Team incident reports."""
         incidents = []
@@ -474,6 +677,7 @@ class BlueTeamEngine:
                         "automated_defense": "Robo Blue Team has flagged this port and is actively monitoring for incoming connection bursts.",
                         "action_label": "Quarantine / Isolate",
                         "action_type": "isolate_port",
+                        "remediation_cmd": "sudo iptables -A INPUT -p tcp --dport 22 -s 127.0.0.1 -j ACCEPT && sudo iptables -A INPUT -p tcp --dport 22 -j DROP",
                     })
                 else:
                     incidents.append({
@@ -556,6 +760,76 @@ class BlueTeamEngine:
                 "action_type": "acknowledge",
             })
 
+        if kernel_stack:
+            for k_key, k_info in kernel_stack.items():
+                if not k_info.get("compliant", True):
+                    inc_id = f"kernel_sysctl_{k_key}"
+                    if inc_id in self.acknowledged_incident_ids:
+                        continue
+                    incidents.append({
+                        "id": inc_id,
+                        "timestamp": now,
+                        "time_str": time.strftime("%H:%M:%S", time.localtime(now)),
+                        "severity": k_info.get("severity", "HIGH"),
+                        "title": f"Linux Kernel Weakness: {k_info.get('name')}",
+                        "target": f"sysctl {k_key}",
+                        "process": "Linux Kernel Network Stack",
+                        "what_happened": f"Kernel parameter '{k_info.get('path')}' is set to {k_info.get('current_val')} (Recommended secure value: {k_info.get('expected_val')}).",
+                        "why_it_matters": k_info.get("risk", "Security exposure in kernel network processing."),
+                        "recommendation": f"Run hardening command: '{k_info.get('remediation')}'.",
+                        "automated_defense": "Robo Blue Hat has generated a kernel sysctl hardening rule.",
+                        "action_label": "Apply Kernel Hardening",
+                        "action_type": "harden_sysctl",
+                        "remediation_cmd": k_info.get("remediation"),
+                    })
+
+        if recon_scans:
+            for scan in recon_scans:
+                src_ip = scan.get("src_ip", "0.0.0.0")
+                inc_id = f"recon_{src_ip}_{int(scan.get('first_seen', now))}"
+                if inc_id in self.acknowledged_incident_ids:
+                    continue
+                probed_str = ", ".join(str(p) for p in scan.get("ports_probed", [])[:8])
+                incidents.append({
+                    "id": inc_id,
+                    "timestamp": scan.get("timestamp", now),
+                    "time_str": time.strftime("%H:%M:%S", time.localtime(scan.get("timestamp", now))),
+                    "severity": "HIGH",
+                    "title": f"Active Reconnaissance: Port Sweep Detected ({src_ip})",
+                    "target": src_ip,
+                    "process": "Reconnaissance Hunter Engine",
+                    "what_happened": f"Host '{src_ip}' probed {scan.get('count')} distinct ports ({probed_str}) in under {scan.get('window_sec', 12)} seconds.",
+                    "why_it_matters": "Automated network sweeps are the primary precursor to exploitation, mapping which daemons and vulnerabilities exist on your host.",
+                    "recommendation": f"Quarantine host {src_ip} via kernel firewall to block further reconnaissance.",
+                    "automated_defense": f"Automated IPS rule generated: sudo iptables -A INPUT -s {src_ip} -j DROP",
+                    "action_label": "Quarantine Scanner",
+                    "action_type": "block_ip",
+                    "remediation_cmd": f"sudo iptables -A INPUT -s {src_ip} -j DROP",
+                })
+
+        if threat_sessions:
+            for sess in threat_sessions:
+                if sess.get("is_suspicious"):
+                    inc_id = f"threat_{sess.get('dst_ip')}_{sess.get('dst_port')}"
+                    if inc_id in self.acknowledged_incident_ids:
+                        continue
+                    indicators_str = "; ".join(sess.get("indicators", []))
+                    incidents.append({
+                        "id": inc_id,
+                        "timestamp": now,
+                        "time_str": time.strftime("%H:%M:%S", time.localtime(now)),
+                        "severity": sess.get("severity", "HIGH"),
+                        "title": f"Outbound Threat Intelligence Flag: {sess.get('domain') or sess.get('dst_ip')}",
+                        "target": f"{sess.get('dst_ip')}:{sess.get('dst_port')}",
+                        "process": "Threat Intelligence Classifier",
+                        "what_happened": f"Outbound traffic triggered behavioral indicators: {indicators_str}.",
+                        "why_it_matters": "High-entropy domain names or non-standard remote ports strongly correlate with Command & Control (C2) or unauthorized data exfiltration.",
+                        "recommendation": "Inspect initiating desktop application and block outbound destination.",
+                        "automated_defense": "Connection logged for behavioral correlation.",
+                        "action_label": "Acknowledge",
+                        "action_type": "acknowledge",
+                    })
+
         sev_rank = {"CRITICAL": 0, "HIGH": 1, "WARNING": 2, "MEDIUM": 3, "INFO": 4}
         incidents.sort(key=lambda x: (sev_rank.get(x["severity"], 99), -x["timestamp"]))
         return incidents
@@ -563,19 +837,24 @@ class BlueTeamEngine:
     def acknowledge_incident(self, incident_id: str):
         self.acknowledged_incident_ids.add(incident_id)
 
-    def get_full_posture_report(self, blocked_ips: dict[str, Any] = None, recent_anomalies: list[dict[str, Any]] = None) -> dict[str, Any]:
+    def get_full_posture_report(self, blocked_ips: dict[str, Any] = None, recent_anomalies: list[dict[str, Any]] = None, threat_sessions: list[dict[str, Any]] = None) -> dict[str, Any]:
         """Assembles comprehensive live Blue Team state."""
         self.refresh_profile()
         attack_surface = self.auditor.audit_listening_ports()
         gateway_integrity = self.gateway_watchdog.check_integrity()
+        kernel_stack = self.kernel_auditor.audit_kernel_stack()
+        recon_scans = self.recon_detector.get_recent_scans()
         blocked_ips = blocked_ips or {}
         recent_anomalies = recent_anomalies or []
+        threat_sessions = threat_sessions or []
 
         posture = self.compute_posture_score(
             attack_surface=attack_surface,
             gateway_integrity=gateway_integrity,
             anomalies_count=len(recent_anomalies),
             unencrypted_flows_count=0,
+            kernel_stack=kernel_stack,
+            recon_scans_count=len(recon_scans),
         )
 
         incidents = self.generate_incident_triage(
@@ -583,6 +862,9 @@ class BlueTeamEngine:
             gateway_integrity=gateway_integrity,
             blocked_ips=blocked_ips,
             recent_anomalies=recent_anomalies,
+            kernel_stack=kernel_stack,
+            recon_scans=recon_scans,
+            threat_sessions=threat_sessions,
         )
 
         return {
@@ -590,7 +872,37 @@ class BlueTeamEngine:
             "posture": posture,
             "attack_surface": attack_surface,
             "gateway_integrity": gateway_integrity,
+            "kernel_hardening": kernel_stack,
+            "recon_scans": recon_scans,
             "incidents": incidents,
             "active_countermeasures": self.active_countermeasures,
             "timestamp": time.time(),
+        }
+
+    def generate_security_audit_export(self, blocked_ips: dict[str, Any] = None, recent_anomalies: list[dict[str, Any]] = None) -> dict[str, Any]:
+        """Produces a structured compliance and threat audit report for export."""
+        report = self.get_full_posture_report(blocked_ips=blocked_ips, recent_anomalies=recent_anomalies)
+        now = time.time()
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(now))
+
+        return {
+            "title": "Robo Blue Hat Team - Host & Network Security Audit Report",
+            "audit_timestamp": now,
+            "audit_time_utc": time_str,
+            "host_profile": report["network_profile"],
+            "executive_summary": {
+                "posture_score": report["posture"]["score"],
+                "security_grade": report["posture"]["grade"],
+                "verdict": report["posture"]["verdict"],
+                "total_listening_daemons": report["posture"]["counts"]["total_listening"],
+                "critical_wan_exposed": report["posture"]["counts"]["critical_exposed"],
+                "high_exposed": report["posture"]["counts"]["high_exposed"],
+                "safe_localhost_services": report["posture"]["counts"]["safe_localhost"],
+            },
+            "posture_deductions": report["posture"]["deductions"],
+            "kernel_hardening_audit": report["kernel_hardening"],
+            "listening_attack_surface": report["attack_surface"],
+            "gateway_arp_integrity": report["gateway_integrity"],
+            "active_security_incidents": report["incidents"],
+            "active_countermeasures": report["active_countermeasures"],
         }
