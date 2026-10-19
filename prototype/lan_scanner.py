@@ -1,4 +1,5 @@
 import os
+import subprocess
 import time
 from typing import Any
 
@@ -92,20 +93,40 @@ class LanScanner:
         except Exception as e:
             print(f"[LanScanner Error] {e}")
 
-        # Always include dynamically discovered gateway baseline if table empty
+        # If ARP proc is empty, query kernel ip neigh for active physical neighbors
         if not devices:
-            from prototype.blue_team_engine import DynamicNetworkDetector
-            net_profile = DynamicNetworkDetector.detect_network_profile()
-            devices.append({
-                "ip": net_profile.get("gateway_ip", "10.0.0.1"),
-                "mac": net_profile.get("gateway_mac", "1e:75:a6:60:07:aa"),
-                "vendor": "Wi-Fi Router / Gateway",
-                "interface": self.interface,
-                "is_gateway": True,
-                "arp_spoof_risk": False,
-                "status": "ONLINE",
-                "last_seen": time.time(),
-            })
+            try:
+                res = subprocess.run(
+                    ["ip", "neigh", "show", "dev", self.interface],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    timeout=1.0,
+                )
+                if res.returncode == 0:
+                    for line in res.stdout.splitlines():
+                        parts = line.split()
+                        if len(parts) >= 5 and "lladdr" in parts:
+                            idx = parts.index("lladdr")
+                            ip = parts[0]
+                            mac = parts[idx + 1]
+                            if mac != "00:00:00:00:00:00" and ":" in mac:
+                                from prototype.blue_team_engine import DynamicNetworkDetector
+                                net_profile = DynamicNetworkDetector.detect_network_profile()
+                                is_gateway = ip == net_profile.get("gateway_ip") or ip.endswith(".1")
+                                vendor = self.get_oui_vendor(mac)
+                                devices.append({
+                                    "ip": ip,
+                                    "mac": mac,
+                                    "vendor": vendor,
+                                    "interface": self.interface,
+                                    "is_gateway": is_gateway,
+                                    "arp_spoof_risk": False,
+                                    "status": "ONLINE",
+                                    "last_seen": time.time(),
+                                })
+            except Exception:
+                pass
 
         self.last_scan_time = time.time()
         self.cached_devices = devices

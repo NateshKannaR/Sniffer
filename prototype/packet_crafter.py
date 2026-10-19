@@ -19,9 +19,9 @@ class PacketCrafter:
     @classmethod
     def craft(
         cls,
-        dst_ip: str = "10.0.0.1",
+        dst_ip: str = "127.0.0.1",
         dst_port: int = 80,
-        src_ip: str = "10.138.114.94",
+        src_ip: str = "",
         src_port: int = 0,
         protocol: str = "TCP",
         flags: list[str] = None,
@@ -29,25 +29,31 @@ class PacketCrafter:
         preset: str = None,
         payload_text: str = "PROTOTYPE_CUSTOM_TEST_PACKET",
     ) -> PacketData:
+        from prototype.blue_team_engine import DynamicNetworkDetector
+        net_profile = DynamicNetworkDetector.detect_network_profile()
+        host_ip = net_profile.get("host_ip", "127.0.0.1")
+        if not src_ip:
+            src_ip = host_ip
+
         flags = flags or []
         proto_upper = protocol.upper()
 
         # Handle Presets
         if preset == "xmas":
             flags = ["FIN", "PSH", "URG"]
-            if src_ip == "10.138.114.94":
+            if src_ip == host_ip:
                 src_ip = "198.51.100.42"
         elif preset == "null":
             flags = []
-            if src_ip == "10.138.114.94":
+            if src_ip == host_ip:
                 src_ip = "198.51.100.42"
         elif preset == "syn":
             flags = ["SYN"]
-            if src_ip == "10.138.114.94":
+            if src_ip == host_ip:
                 src_ip = "198.51.100.42"
         elif preset == "rst":
             flags = ["RST"]
-            if src_ip == "10.138.114.94":
+            if src_ip == host_ip:
                 src_ip = "198.51.100.42"
 
         flag_hex = 0

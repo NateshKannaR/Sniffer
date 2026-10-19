@@ -73,15 +73,12 @@
 
     <!-- Right Controls: Segmented Data Source & Action -->
     <div class="flex items-center gap-3">
-      <!-- Segmented Source Toggle -->
-      <div class="flex items-center bg-[#101726] p-1 rounded-xl border border-white/[0.08] shadow-inner">
-        <button onclick="setSource('live')" id="btn-src-live" class="px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-cyan-500 text-slate-950 shadow-sm flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span>
-          Physical Wi-Fi (wlo1)
-        </button>
-        <button onclick="setSource('simulated')" id="btn-src-sim" class="px-3 py-1 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1">
-          Lab Attack Scenarios
-        </button>
+      <!-- Real Physical Hardware Ingestion Badge -->
+      <div class="flex items-center bg-[#101726] px-3 py-1.5 rounded-xl border border-cyan-500/30 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2"></span>
+        <span class="text-xs font-bold text-cyan-400 font-mono tracking-tight">Physical Wi-Fi (wlo1)</span>
+        <span class="mx-2 text-slate-600">|</span>
+        <span class="text-[11px] font-semibold text-emerald-400">100% Real Kernel Telemetry</span>
       </div>
 
       <!-- Live Stream Status Badge -->
@@ -491,9 +488,10 @@
             <p class="text-xs text-slate-400 mt-0.5">Captures every HTTP request, TLS SNI domain handshake, and DNS lookup across all browser tabs and Linux desktop apps.</p>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-sim-web" onclick="triggerSimulateWeb()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
-              ⚡ Simulate Web Browsing
-            </button>
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-emerald-500/30 text-emerald-400 font-mono text-xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Live Kernel DPI
+            </div>
             <span class="text-xs px-2.5 py-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-mono">
               Captured: <span id="web-total-count" class="font-bold text-white">0</span> requests (<span id="web-domain-count" class="font-bold text-white">0</span> domains)
             </span>
@@ -773,7 +771,7 @@
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <h2 class="font-bold text-base text-white">Local Wi-Fi Subnet & ARP Device Discovery</h2>
             </div>
-            <p class="text-xs text-slate-400 mt-0.5">Discovers neighboring devices on your Wi-Fi LAN (<code class="text-blue-400 font-mono">10.138.114.0/24</code>), resolves Hardware OUI Vendors, and monitors ARP cache poisoning.</p>
+            <p class="text-xs text-slate-400 mt-0.5">Discovers neighboring devices on your Wi-Fi LAN (<code id="lan-subnet-text" class="text-blue-400 font-mono">10.22.147.0/24</code>), resolves Hardware OUI Vendors, and monitors ARP cache poisoning.</p>
           </div>
           <div class="flex items-center gap-3">
             <button onclick="loadLanDevices()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition-all shadow-sm">
@@ -847,7 +845,7 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-slate-400 text-[11px] font-sans mb-1">Source IP</label>
-                <input type="text" id="craft-src-ip" value="10.138.114.94" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+                <input type="text" id="craft-src-ip" value="10.22.147.94" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
               </div>
               <div>
                 <label class="block text-slate-400 text-[11px] font-sans mb-1">Source Port (0=Random)</label>
@@ -855,7 +853,7 @@
               </div>
               <div>
                 <label class="block text-slate-400 text-[11px] font-sans mb-1">Destination IP</label>
-                <input type="text" id="craft-dst-ip" value="10.0.0.1" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+                <input type="text" id="craft-dst-ip" value="10.22.147.23" class="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
               </div>
               <div>
                 <label class="block text-slate-400 text-[11px] font-sans mb-1">Destination Port</label>
@@ -994,7 +992,7 @@
               ↺ Reset
             </button>
             <button onclick="tcpSimulateSynFlood()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 transition-all">
-              ⚠️ Simulate SYN Flood
+              ⚠️ Craft SYN Probe
             </button>
           </div>
         </div>
@@ -1009,7 +1007,7 @@
                 <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
                 <span class="font-bold text-white text-sm">Client (Local Host)</span>
               </div>
-              <div class="text-emerald-400">10.138.114.94:52341</div>
+              <div id="tcp-vis-client-endpoint" class="text-emerald-400">10.22.147.94:52341</div>
               <div class="mt-2 text-[11px] text-slate-400">
                 Linux Kernel State: <span id="tcp-client-state" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">CLOSED</span>
               </div>
@@ -1021,7 +1019,7 @@
                 <span class="w-3 h-3 rounded-full bg-indigo-400"></span>
                 <span class="font-bold text-white text-sm">Server (Remote Host)</span>
               </div>
-              <div class="text-indigo-400">10.0.0.1:80 (HTTP)</div>
+              <div id="tcp-vis-server-endpoint" class="text-indigo-400">10.22.147.23:80 (HTTP)</div>
               <div class="mt-2 text-[11px] text-slate-400">
                 Linux Kernel State: <span id="tcp-server-state" class="font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">LISTEN</span>
               </div>
@@ -1504,59 +1502,18 @@
       }
     }
 
-    // Scenario Switching
+    // Scenario function (retained for backward compatibility, strictly live telemetry enforced)
     function setScenario(scenarioKey) {
-      currentScenario = scenarioKey;
-      fetch('/api/scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenarioKey })
-      }).catch(e => console.error(e));
-
-      ['normal', 'syn_scan', 'syn_flood', 'dns_tunnel'].forEach(k => {
-        const btn = document.getElementById(`btn-${k}`);
-        if (k === scenarioKey) {
-          btn.className = "px-2.5 py-1 text-xs font-medium rounded-md transition-all shadow-sm " + 
-            (k === 'normal' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white');
-        } else {
-          btn.className = "px-2.5 py-1 text-xs font-medium rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-700";
-        }
-      });
+      // Real-time hardware stream active
     }
 
-    // Data Source Switching (Simulated vs Live Interface)
+    // Data Source Management (Strictly Real Physical Hardware Telemetry)
     function setSource(sourceKey) {
-      state.packets = [];
-      state.selectedPacket = null;
-      state.isUserPinned = false;
-      const badge = document.getElementById('inspect-pkt-badge');
-      if (badge) badge.textContent = "Buffering packets...";
-      fetch('/api/source', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: sourceKey, interface: 'wlo1' })
-      })
-      .then(res => res.json())
-      .then(data => {
-        updateSourceButtons(data.source);
-      })
-      .catch(e => console.error("Error setting source:", e));
+      // 100% Real hardware ingestion is locked
     }
 
     function updateSourceButtons(source) {
-      const btnSim = document.getElementById('btn-src-sim');
-      const btnLive = document.getElementById('btn-src-live');
-      const scenarioBox = document.getElementById('scenario-box');
-
-      if (source === 'live') {
-        if (btnLive) btnLive.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-cyan-500 text-slate-950 shadow-sm flex items-center gap-1.5";
-        if (btnSim) btnSim.className = "px-3 py-1 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1";
-        if (scenarioBox) scenarioBox.classList.add('opacity-40', 'pointer-events-none');
-      } else {
-        if (btnSim) btnSim.className = "px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1";
-        if (btnLive) btnLive.className = "px-3 py-1 text-xs font-medium rounded-lg transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
-        if (scenarioBox) scenarioBox.classList.remove('opacity-40', 'pointer-events-none');
-      }
+      // Real hardware ingestion active
     }
 
 
@@ -1629,6 +1586,19 @@
 
         if (data.web_requests) {
           state.webRequests = data.web_requests;
+        }
+
+        if (data.blue_team && data.blue_team.network_profile) {
+          const np = data.blue_team.network_profile;
+          state.hostIp = np.host_ip;
+          state.gatewayIp = np.gateway_ip;
+          state.subnet = np.subnet;
+          const subEl = document.getElementById('lan-subnet-text');
+          if (subEl && np.subnet) subEl.textContent = np.subnet;
+          const tcpClient = document.getElementById('tcp-vis-client-endpoint');
+          if (tcpClient && np.host_ip) tcpClient.textContent = `${np.host_ip}:52341`;
+          const tcpServer = document.getElementById('tcp-vis-server-endpoint');
+          if (tcpServer && np.gateway_ip) tcpServer.textContent = `${np.gateway_ip}:80 (HTTP)`;
         }
 
         renderAll();
@@ -2175,6 +2145,10 @@
         if (!res.ok) return;
         const data = await res.json();
         const devices = data.devices || [];
+        if (data.subnet) {
+          const subEl = document.getElementById('lan-subnet-text');
+          if (subEl) subEl.textContent = data.subnet;
+        }
         
         tbody.innerHTML = '';
         let hasSpoof = false;
@@ -2240,15 +2214,18 @@
         document.getElementById(`flag-${f}`).checked = false;
       });
 
+      const hostIp = state.hostIp || "10.22.147.94";
+      const gatewayIp = state.gatewayIp || "10.22.147.23";
+
       if (preset === 'normal') {
-        document.getElementById('craft-src-ip').value = "10.138.114.94";
-        document.getElementById('craft-dst-ip').value = "10.0.0.1";
+        document.getElementById('craft-src-ip').value = hostIp;
+        document.getElementById('craft-dst-ip').value = gatewayIp;
         document.getElementById('flag-syn').checked = true;
-        document.getElementById('craft-payload').value = "GET /index.html HTTP/1.1";
+        document.getElementById('craft-payload').value = "GET / HTTP/1.1";
         document.getElementById('craft-dst-port').value = 80;
       } else if (preset === 'xmas') {
         document.getElementById('craft-src-ip').value = "198.51.100.42";
-        document.getElementById('craft-dst-ip').value = "10.138.114.94";
+        document.getElementById('craft-dst-ip').value = hostIp;
         document.getElementById('flag-fin').checked = true;
         document.getElementById('flag-psh').checked = true;
         document.getElementById('flag-urg').checked = true;
@@ -2256,18 +2233,18 @@
         document.getElementById('craft-dst-port').value = 445;
       } else if (preset === 'null') {
         document.getElementById('craft-src-ip').value = "198.51.100.42";
-        document.getElementById('craft-dst-ip').value = "10.138.114.94";
+        document.getElementById('craft-dst-ip').value = hostIp;
         document.getElementById('craft-payload').value = "NULL_SCAN_EVASION_TEST";
         document.getElementById('craft-dst-port').value = 22;
       } else if (preset === 'syn') {
         document.getElementById('craft-src-ip').value = "198.51.100.42";
-        document.getElementById('craft-dst-ip').value = "10.138.114.94";
+        document.getElementById('craft-dst-ip').value = hostIp;
         document.getElementById('flag-syn').checked = true;
         document.getElementById('craft-payload').value = "SYN_STEALTH_PROBE";
         document.getElementById('craft-dst-port').value = 3389;
       } else if (preset === 'rst') {
         document.getElementById('craft-src-ip').value = "198.51.100.42";
-        document.getElementById('craft-dst-ip').value = "10.138.114.94";
+        document.getElementById('craft-dst-ip').value = hostIp;
         document.getElementById('flag-rst').checked = true;
         document.getElementById('craft-payload').value = "RESET_CONNECTION_TERMINATION";
         document.getElementById('craft-dst-port').value = 80;
@@ -2500,8 +2477,8 @@
     }
 
     function tcpSimulateSynFlood() {
-      setScenario('syn_flood');
-      switchTab('network-tab');
+      switchTab('crafter-tab');
+      setCrafterPreset('syn');
     }
 
     // Start background telemetry loop (polling every 300ms)

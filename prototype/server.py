@@ -1,6 +1,5 @@
 import json
 import os
-import random
 import sys
 import threading
 import time
@@ -21,7 +20,7 @@ from prototype.graph_engine import GraphEngine
 from prototype.inference_runner import InferenceRunner
 from prototype.lan_scanner import LanScanner
 from prototype.packet_crafter import PacketCrafter
-from prototype.packet_engine import LivePacketSniffer, TrafficGenerator
+from prototype.packet_engine import LivePacketSniffer
 from prototype.process_tracker import ProcessTracker
 
 
@@ -29,9 +28,8 @@ class PrototypeState:
     def __init__(self):
         self.blue_team = BlueTeamEngine()
         self.interface = self.blue_team.network_profile.get("interface", "wlo1")
-        self.data_source = "live"  # 100% Real Linux Network Telemetry by default!
+        self.data_source = "live"  # 100% Real Physical Hardware Telemetry Only
         self.scenario = "normal"
-        self.generator = TrafficGenerator()
         self.live_sniffer = LivePacketSniffer(interface=self.interface)
         self.aggregator = FlowAggregator(flow_timeout_sec=4.0)
         self.graph_engine = GraphEngine(window_size=32)
@@ -53,39 +51,23 @@ class PrototypeState:
         # When a flow completes, register it into the graph engine
         self.aggregator.register_listener(self.on_flow_complete)
 
-    def set_source(self, source: str, interface: str = "wlo1"):
+    def set_source(self, source: str = "live", interface: str = "wlo1"):
         with self.lock:
-            self.data_source = source
+            self.data_source = "live"
             self.interface = interface
             self.lan_scanner.interface = interface
-            if source == "live":
-                if self.live_sniffer.interface != interface:
-                    self.live_sniffer.stop()
-                    self.live_sniffer = LivePacketSniffer(interface=interface)
-                self.live_sniffer.start()
-            else:
+            if self.live_sniffer.interface != interface:
                 self.live_sniffer.stop()
+                self.live_sniffer = LivePacketSniffer(interface=interface)
+            self.live_sniffer.start()
 
     def on_flow_complete(self, flow):
         self.graph_engine.add_flow(flow)
 
     def _enrich_packet(self, pkt):
         pkt_dict = pkt.to_dict()
-        # Look up Process for local source or dest port in Linux /proc
+        # Look up Process for local source or dest port in Linux kernel sockets (100% real only)
         proc = self.process_tracker.get_process_for_port(pkt.src_port) or self.process_tracker.get_process_for_port(pkt.dst_port)
-        if not proc:
-            # Intelligent fallback for transient closed sockets and simulated traffic
-            if pkt.dst_port in (80, 443) or pkt.src_port in (80, 443):
-                if pkt.src_ip.startswith("10.") or pkt.dst_ip.startswith("10."):
-                    proc = {"pid": 2538, "name": "chrome", "cmdline": "/opt/google/chrome/chrome --type=utility (HTTPS Stream)"}
-                else:
-                    proc = {"pid": 1024, "name": "nginx-worker", "cmdline": "nginx: worker process (HTTP/HTTPS)"}
-            elif pkt.dst_port == 53 or pkt.src_port == 53:
-                proc = {"pid": 612, "name": "systemd-resolved", "cmdline": "/lib/systemd/systemd-resolved (DNS Client)"}
-            elif pkt.dst_port == 5432 or pkt.src_port == 5432:
-                proc = {"pid": 1890, "name": "postgres", "cmdline": "postgres: client connection"}
-            elif pkt.is_attack:
-                proc = {"pid": 13370, "name": "nmap", "cmdline": "nmap -sS (Security Audit Probe)"}
         pkt_dict["process"] = proc
 
         # Look up GeoIP for destination or source
@@ -134,8 +116,8 @@ class PrototypeState:
                 "url": url,
                 "method": method,
                 "protocol": pkt_dict.get("protocol_name", "TCP"),
-                "process": proc.get("name", "chrome" if pkt.dst_port in (80, 443) else "system") if proc else ("chrome" if pkt.dst_port in (80, 443) else "system"),
-                "pid": proc.get("pid", 2538 if pkt.dst_port in (80, 443) else 0) if proc else (2538 if pkt.dst_port in (80, 443) else 0),
+                "process": proc.get("name", "-") if proc else "-",
+                "pid": proc.get("pid", "-") if proc else "-",
                 "src_ip": pkt.src_ip,
                 "dst_ip": pkt.dst_ip,
                 "dst_port": pkt.dst_port,
@@ -149,12 +131,7 @@ class PrototypeState:
         return pkt_dict
 
     def step(self):
-        pkt = None
-        if self.data_source == "live":
-            pkt = self.live_sniffer.get_packet(timeout=0.15)
-        else:
-            with self.lock:
-                pkt = self.generator.generate_packet(self.scenario)
+        pkt = self.live_sniffer.get_packet(timeout=0.15)
 
         if pkt is None:
             return
@@ -240,7 +217,8 @@ class PrototypeHandler(BaseHTTPRequestHandler):
             self._send_json(report)
         elif parsed.path == "/api/lan":
             devices = GLOBAL_STATE.lan_scanner.scan_lan()
-            self._send_json({"devices": devices})
+            subnet = GLOBAL_STATE.blue_team.network_profile.get("subnet_cidr") or GLOBAL_STATE.blue_team.network_profile.get("subnet", "")
+            self._send_json({"devices": devices, "subnet": subnet})
         elif parsed.path == "/api/processes":
             procs = GLOBAL_STATE.process_tracker.get_all_active_processes()
             self._send_json({"processes": procs})
@@ -313,9 +291,9 @@ class PrototypeHandler(BaseHTTPRequestHandler):
             try:
                 data = json.loads(body)
                 pkt = PacketCrafter.craft(
-                    dst_ip=data.get("dst_ip", "10.0.0.1"),
+                    dst_ip=data.get("dst_ip", GLOBAL_STATE.blue_team.network_profile.get("gateway_ip", "10.0.0.1")),
                     dst_port=int(data.get("dst_port", 80)),
-                    src_ip=data.get("src_ip", "10.138.114.94"),
+                    src_ip=data.get("src_ip", GLOBAL_STATE.blue_team.network_profile.get("host_ip", "127.0.0.1")),
                     src_port=int(data.get("src_port", 0)),
                     protocol=data.get("protocol", "TCP"),
                     flags=data.get("flags", []),
@@ -337,37 +315,7 @@ class PrototypeHandler(BaseHTTPRequestHandler):
             else:
                 self.send_error(400, "Missing ip query parameter")
         elif parsed.path == "/api/simulate_web":
-            sample_sites = [
-                ("github.com", "140.82.121.4", "TLS 1.3", "https://github.com/NateshKannaR/Sniffer", "chrome", 2538),
-                ("www.google.com", "142.250.190.46", "TLS 1.3", "https://www.google.com/search?q=cybersecurity+packet+sniffer", "chrome", 2538),
-                ("api.cloudflare.com", "104.16.132.229", "TLS 1.3", "https://api.cloudflare.com/client/v4/user", "curl", 3120),
-                ("en.wikipedia.org", "198.35.26.96", "TLS 1.3", "https://en.wikipedia.org/wiki/Packet_analyzer", "chrome", 2538),
-                ("dns.google", "8.8.8.8", "DNS", "DNS Query: api.openai.com", "systemd-resolved", 612),
-                ("cdn.discordapp.com", "162.159.130.233", "TLS 1.3", "https://cdn.discordapp.com/attachments/voice_stream", "discord", 4120),
-            ]
-            with GLOBAL_STATE.lock:
-                for domain, ip_dst, method, url, proc_name, pid in sample_sites:
-                    geo = GLOBAL_STATE.geoip_resolver.resolve(ip_dst)
-                    entry = {
-                        "id": len(GLOBAL_STATE.web_requests) + 1,
-                        "timestamp": time.time(),
-                        "time_str": time.strftime("%H:%M:%S"),
-                        "domain": domain,
-                        "url": url,
-                        "method": method,
-                        "protocol": "TLS/HTTPS" if method == "TLS 1.3" else ("DNS" if method == "DNS" else "HTTP"),
-                        "process": proc_name,
-                        "pid": pid,
-                        "src_ip": "10.138.114.94",
-                        "dst_ip": ip_dst,
-                        "dst_port": 443 if method == "TLS 1.3" else (53 if method == "DNS" else 80),
-                        "geo": geo,
-                        "status": "Clean",
-                        "is_attack": False,
-                        "bytes": random.randint(420, 1480),
-                    }
-                    GLOBAL_STATE.web_requests.appendleft(entry)
-            self._send_json({"status": "ok", "generated": len(sample_sites)})
+            self._send_json({"status": "disabled", "message": "Simulation disabled: pure real-time Linux hardware telemetry active"})
         else:
             self.send_error(404, "Unknown endpoint")
 

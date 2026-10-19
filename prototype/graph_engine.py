@@ -84,28 +84,32 @@ class GraphEngine:
             window_ips.add(f.src_ip)
             window_ips.add(f.dst_ip)
 
+        from prototype.blue_team_engine import DynamicNetworkDetector
+        net_profile = DynamicNetworkDetector.detect_network_profile()
+        host_ip = net_profile.get("host_ip", "127.0.0.1")
+        gateway_ip = net_profile.get("gateway_ip", "")
+        subnet_prefix = host_ip.rsplit(".", 1)[0] + "." if "." in host_ip and host_ip != "127.0.0.1" else ""
+
         nodes = []
         for ip in sorted(window_ips):
             # Check if associated with an attack
             is_attack_node = any(
                 f.is_attack for f in self.flow_history if f.src_ip == ip or f.dst_ip == ip
             )
-            is_local = (
-                ip in ["10.138.114.94", "192.168.1.105", "127.0.0.1", "::1"]
-                or ip.startswith("fe80:")
-                or ip.startswith("2409:40f4:2145:d265")
-            )
+            is_my_machine = ip in (host_ip, "127.0.0.1", "::1", "localhost")
+            is_gw = (ip == gateway_ip or (not gateway_ip and ip.endswith(".1")))
+            is_lan_peer = (subnet_prefix and ip.startswith(subnet_prefix) and not is_my_machine and not is_gw)
 
             if is_attack_node:
                 node_type = "attacker"
                 role = "Attacker / Scanner"
-            elif is_local:
+            elif is_my_machine:
                 node_type = "client"
                 role = "My Machine (Local)"
-            elif ip.endswith(".1") or any(f.dst_port == 53 for f in self.flow_history if f.dst_ip == ip):
+            elif is_gw or any(f.dst_port == 53 for f in self.flow_history if f.dst_ip == ip):
                 node_type = "gateway"
                 role = "Gateway / DNS"
-            elif ip.startswith("10.138.") or ip.startswith("192.168."):
+            elif is_lan_peer or ip.startswith("192.168.") or ip.startswith("10.") or ip.startswith("fe80:"):
                 node_type = "client"
                 role = "LAN Peer"
             else:
